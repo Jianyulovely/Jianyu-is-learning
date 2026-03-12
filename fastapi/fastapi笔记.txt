@@ -87,3 +87,6 @@ Uvicorn → HTTP Response
 浏览器
 
 11. 对于post功能可以使用postman这个应用进行调试，避免编码过程
+
+12. 如果想要实现跨域访问，可以接入CROS middleware，即不同端口号也可以进行访问
+
