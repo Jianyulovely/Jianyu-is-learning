@@ -1,0 +1,89 @@
+1. 同一个应用前端可能有很多，后端只有一个
+
+2. 之前用到的uvicorn是一个ASGI Web Server
+与后端框架无关，用于启动HTTP服务器的工具。
+它的作用是：
+启动一个 HTTP 服务器，用于服务浏览器应用
+监听端口
+接收 HTTP 请求
+把请求交给 FastAPI
+再把响应返回给客户端
+
+3. 启动web服务器命令(--reload 命令用于控制是否实时更新应用代码)：
+uvicorn {入口文件名}:app --reload
+
+4. 路由 
+xxx.com/               # 首页
+xxx.com/about          # 关于页
+xxx.com/about/team     # 团队页
+xxx.com/login          # 登录页
+
+其中xxx.com是域名，后面的部分称为路由（route）
+注：这里的内容可以在讲义上补全，具体是一个web应用的基本路由功能
+
+5. FastAPI如何工作： 创建一个app实例，它监听用户发来的http请求，然后根据
+请求内容决定返回什么
+
+6. @app.get("/what") 则进入本地网页后在网址处写/what后按回车
+则后端接收到前端的http请求，运行下面的函数。
+注：如果只写/则表明进入网页的第一个页面(根页面)
+
+7. 后端任务核心：对通过url发送来的请求做不同处理，处理路由就是后端任务核心
+
+8. 这里再看一眼uvicorn，它是启动http的工具。相当于一个服务端口
+post和get区别：GET 是通过 URL 参数传递数据来获取资源。用于获取数据，，不会改变服务器状态。
+post是通过http request body向服务器提交数据，服务器处理这些数据（比如说接收到登陆的用户名和
+密码会整理成LoginForm格式）
+注：获取和提交是以“客户端”为主语进行陈述，即客户端（浏览器/前端）用get获取后端资源
+用post向后端提交数据资源
+
+9. 登陆时需要用一个临时性的token
+
+10. 补充了一个学长的http报文结构的md文件——http.md，后续遗忘可以查看
+报文主要结构如下：
+请求信息
+请求头 headers
+请求体 body
+浏览器本身会产生一个HTTP报文，浏览器的服务器（这里就是Uvicorn接收请求）
+接收后服务器将原始HTTP转换为ASGI格式，如：
+GET / HTTP/1.1
+Host: 127.0.0.1:8000
+        ↓
+{
+    "type": "http",
+    "method": "GET",
+    "path": "/",
+    "headers": [...]
+}
+FastAPI对于解析后的报文部分内容会进行检查匹配，完整流程如下：
+浏览器
+   │
+   │ HTTP Request
+   ▼
+Uvicorn
+   │
+   │ 解析HTTP
+   ▼
+ASGI
+   │
+   ▼
+FastAPI
+   │
+   │ 路由匹配
+   │ 参数解析
+   ▼
+Python函数
+   │
+   ▼
+返回 dict
+   │
+   ▼
+FastAPI → JSON
+   │
+   ▼
+Uvicorn → HTTP Response
+   │
+   ▼
+浏览器
+
+11. 对于post功能可以使用postman这个应用进行调试，避免编码过程

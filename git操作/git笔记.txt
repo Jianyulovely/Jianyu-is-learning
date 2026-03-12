@@ -1,0 +1,15 @@
+1. 更新远程分支信息（这一步不会改代码，只是让 Git 知道远程多了哪些分支）
+git fetch 
+
+2. 查看远程分支
+git branch -a
+
+3. 切换到某个分支
+git checkout -b branch_name branch_name origin/branch_name
+
+意思是：
+创建本地分支 branch_name
+并跟踪远程 origin/branch_name
+
+3. 查看分支
+git branch

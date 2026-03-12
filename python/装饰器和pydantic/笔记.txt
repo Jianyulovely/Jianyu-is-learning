@@ -1,0 +1,55 @@
+1. *args  **kwargs表示任何参数，原因如下：
+*args 接收任意数量的位置参数，打包为元组  如：func(1, 2, 3) → args=(1, 2, 3)
+
+2. 装饰器的本质：接收一个函数，然后返回一个新函数，原本函数被替换（旧函数 → 新函数）
+补充：@functools.wraps(func) 用于保留原函数的元数据默认情况下，包装函数会覆盖原函数的元数据（如函数名、文档字符串、参数列表等）
+functools.wraps 可以将原函数的元数据复制到包装函数上。如果没有这个，则原函数被换成func
+
+3. 给原本函数添加新的功能可以使用装饰器，装饰器定义时里面有wrapper，包含了
+新的功能的方法，同时还有原函数的使用
+
+4. 使用@decorator被装饰的函数在使用时其实先由wrapper执行后调用原始fun函数，
+然后得到结果后返回
+
+5. 通过python装饰器可以在"别人的库函数中"添加功能而不用在库源代码中修改（涉及装饰器本质）
+解释：装饰器是用来装饰（增添新功能）原函数的，输入是原函数，输出一个装饰后的函数，这个可以由"我"
+决定增添什么功能
+
+
+1. BaseModel 的作用：
+类型验证 自动检查字段类型是否正确 
+数据转换 自动将输入数据转换为指定类型 （比如说在salary中输入"500"，自动转换成定义的int）
+序列化 轻松将对象转换为字典或 JSON 
+反序列化 从字典或 JSON 创建对象 
+错误处理 提供详细的错误信息
+
+2. 在pydantic v2中，min_age: int = 18 会被解析成Model field
+而不是Class attribute，模型字段只在实例创建后猜存在
+但是验证其在执行时，实例还没有创建完毕，所以cls.min_age不存在
+
+3. Model field和Class attribute区别：
+类型	                        定义方式	                属于谁	                用途
+Model field	                   age: int	                   模型实例	            存储数据、参与校验
+Class attribute	         MIN_AGE = 18 或 ClassVar	        类本身	             常量、配置
+
+4. v2 里 类里的变量必须要有类型注解，否则它会以为你忘记写字段类型，于是直接报错
+
+5. ClassVar 用来表示：（MIN_AGE）这个变量属于类本身，而不是实例属性。这个变量会被所有实例共享
+
+6. 问：模型创建后是不是已经有一个实例了，即使验证不通过，hobbies也保存了
+不是的。只要验证失败，最终实例不会被创建成功，也不会返回给你
+Model创建流程：
+输入数据
+↓
+字段类型解析 (pydantic-core)
+↓
+field_validator
+↓
+创建临时 model instance
+↓
+model_validator(mode="after")
+↓
+返回最终实例
+
+7. 在web应用中，客户端(http request)填写报文中的body的json被解析为python字典，然后被pydantic进行校验
+通过后转化成basemodel一个实例，然后在fastapi的 return 后变成字典转json，发送(http response)到了客户端
