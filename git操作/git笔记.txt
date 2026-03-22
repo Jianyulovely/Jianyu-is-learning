@@ -29,3 +29,6 @@ git merge dev
 
 6. 查看当前分支结构
 git log --oneline --graph --all --decorate
+
+7. 初始化仓库后链接到已有的空仓库
+git remote add origin 仓库地址
