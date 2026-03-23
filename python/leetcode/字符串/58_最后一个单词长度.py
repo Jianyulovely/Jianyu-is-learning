@@ -11,4 +11,4 @@ print(res)
 # spilt()用于对字符串进行指定分隔符的切片,输出一个列表
 str = "Line1-abcdef \nLine2-abc \nLine4-abcd"
 print(str.split( ))       # 以空格为分隔符，包含 \n
-print(str.split(' ', 1 )) # 以空格为分隔符，分隔成两个
+print(str.split(' ', 1 )) # 以空格为分隔符，分隔成两个（这里面的1是指分割次数）

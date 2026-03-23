@@ -32,4 +32,19 @@ class Solution:
         # 将后面的经过替换的数字置0
         for i in range(j, l):
             nums[i] = 0
-            
+#========================================================================
+# 3.23又做了一遍，又理解了一遍          
+class Solution:
+    def moveZeroes(self, nums: List[int]) -> None:
+        """
+        Do not return anything, modify nums in-place instead.
+        """
+        l = len(nums)
+        slow = 0
+        for fast in range(l):
+            # 快指针查找不是0的地方，然后与慢指针进行元素互换
+            if nums[fast]!=0:
+                nums[slow] , nums[fast] = nums[fast], nums[slow]
+                slow = slow + 1
+                
+        return nums
