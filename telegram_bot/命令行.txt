@@ -1,4 +1,5 @@
 1. 启动ssh，讲本地tg_bot脚本的post请求转发到sever2服务器上
 ssh -L 15000:192.168.31.102:1212 jyyin@10.184.17.35 -p 10222 -N
 
-2. python telegram_bot/tg_bot.py
+2. 启动脚本 
+python telegram_bot/tg_bot.py
