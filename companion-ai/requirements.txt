@@ -2,3 +2,5 @@ python-telegram-bot[job-queue]>=20
 httpx
 pyyaml
 python-dotenv
+aiosqlite
+redis
