@@ -1,0 +1,98 @@
+Companion AI 使用说明
+======================
+版本：P1 | 更新：2026-03-28
+
+
+一、环境要求
+--------------
+- Windows 本地电脑（运行 Bot、Redis、SSH 隧道）
+- conda 环境：companion-ai（Python 3.12）
+- 远程 GPU 服务器已运行 FastAPI LLM 服务（llm/api.py）
+
+
+二、首次启动（按顺序执行）
+--------------------------
+
+步骤 1：激活 conda 环境并安装依赖（仅首次需要）
+    conda activate companion-ai
+    pip install -r requirements.txt
+
+步骤 2：启动 Redis
+    D:\software\Redis\redis-server.exe D:\software\Redis\redis.windows.conf
+
+步骤 3：建立 SSH 隧道（保持此终端窗口开启）
+    python tunnel.py
+    看到 "Tunnel listening on localhost:15000" 说明隧道就绪
+
+步骤 4：启动 Bot（新开一个终端）
+    conda activate companion-ai
+    python main.py
+    看到 "Application started" 说明 Bot 已连接 Telegram
+
+
+三、日常启动（已安装依赖后）
+------------------------------
+每次使用只需执行步骤 2、3、4，顺序不能颠倒。
+隧道和 Bot 各占一个终端窗口，关闭窗口即停止服务。
+
+
+四、停止服务
+------------
+关闭 tunnel.py 终端窗口 → Bot 自动失联
+关闭 main.py 终端窗口 → Bot 停止
+关闭 redis-server 终端窗口 → Redis 停止（会话数据不会丢失，已持久化到 SQLite）
+
+
+五、Bot 指令列表
+----------------
+/start          开始对话（首次使用必须执行，完成注册）
+/me [昵称]      设置你的昵称，AI 会用此称呼你
+                示例：/me 小明
+/profile        查看当前角色、亲密度、昵称
+/reset          清除当前会话上下文（长期记忆不会清除）
+/help           查看所有指令
+
+
+六、数据存储位置
+----------------
+SQLite 数据库：companion-ai/data/companion.db
+    - 用户信息、对话历史、长期记忆（重启后不丢失）
+Redis 缓存：localhost:6379
+    - 活跃会话（TTL 2小时，超时自动从 SQLite 重载）
+
+
+七、常见问题
+------------
+Q：Bot 没有回复？
+A：检查隧道是否在运行。在新终端执行：
+    curl http://localhost:15000/health
+   返回 {"status":"ok"} 则隧道正常，否则重启 tunnel.py
+
+Q：回复乱码或提示"好像有点问题"？
+A：LLM 服务可能超时，稍等重试；或重启 tunnel.py 和 main.py
+
+Q：重启 Bot 后是否记得之前的对话？
+A：是。对话历史持久化在 SQLite，重启后自动恢复。
+
+Q：如何彻底清空一个用户的数据？
+A：目前无指令，需手动删除 data/companion.db 文件（会清空所有用户数据）
+
+
+八、文件结构说明
+----------------
+main.py             Bot 启动入口
+tunnel.py           SSH 本地端口转发（15000→远程:8000）
+config.py           配置读取（从 .env 加载）
+.env                环境变量（Token、LLM地址等，勿提交 git）
+bot/handler.py      消息处理、指令路由
+core/
+  emotion_detector.py   情绪识别
+  prompt_engine.py      System Prompt 动态组装
+  session_manager.py    Redis+SQLite 会话管理
+db/
+  models.py             SQLite 建表
+  redis_client.py       Redis 客户端封装
+roles/personas/
+  jiejie.yaml           角色配置文件
+data/
+  companion.db          SQLite 数据库（自动创建）
