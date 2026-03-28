@@ -45,7 +45,9 @@ async def _call_llm(system_prompt: str, history: list[dict]) -> str:
         "top_p": 0.9,
         "repetition_penalty": 1.1,
     }
-    async with httpx.AsyncClient(timeout=120.0) as client:
+    # local_address="0.0.0.0" 强制 IPv4，防止 localhost→IPv6 导致 tunnel 502
+    transport = httpx.AsyncHTTPTransport(local_address="0.0.0.0")
+    async with httpx.AsyncClient(timeout=120.0, transport=transport) as client:
         resp = await client.post(
             f"{config.LLM_API_URL}/chat",
             json=payload,
