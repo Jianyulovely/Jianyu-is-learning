@@ -16,12 +16,9 @@ class Config:
     # LLM service
     LLM_API_URL: str = os.getenv("LLM_API_URL", "http://localhost:8000")
 
-    # Model
-    MODEL_PATH: str = os.getenv(
-        "MODEL_PATH",
-        str(BASE_DIR.parent / "models/qwen/Qwen2.5-0.5B-Instruct"),
-    )
-    CUDA_DEVICE: str = os.getenv("CUDA_DEVICE", "cuda:0")
+    # Ollama
+    OLLAMA_GEN_URL: str = os.getenv("OLLAMA_GEN_URL", "http://localhost:11434/api/generate")
+    OLLAMA_MODEL: str = os.getenv("OLLAMA_MODEL", "qwen2.5:0.5b")
 
     # Conversation
     MAX_HISTORY_TURNS: int = int(os.getenv("MAX_HISTORY_TURNS", "12"))

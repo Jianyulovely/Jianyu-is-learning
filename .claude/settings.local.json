@@ -12,7 +12,8 @@
       "Bash(powershell.exe -Command \"Get-ChildItem -Path C:\\\\,D:\\\\ -Filter redis-server.exe -Recurse -ErrorAction SilentlyContinue -Depth 5 | Select-Object FullName\")",
       "Bash(powershell.exe -Command \"Start-Process -WindowStyle Hidden 'D:\\\\software\\\\Redis\\\\redis-server.exe' -ArgumentList 'D:\\\\software\\\\Redis\\\\redis.windows.conf'\nsleep 2\n& 'D:\\\\software\\\\Redis\\\\redis-cli.exe' ping\" 2>&1)",
       "Bash(powershell.exe -Command \"& 'D:\\\\miniforge\\\\envs\\\\companion-ai\\\\python.exe' 'D:\\\\桌面\\\\GitHub\\\\Jianyu-is-learning\\\\companion-ai\\\\test_quick.py'\" 2>&1)",
-      "Bash(powershell.exe -Command \"& 'D:\\\\miniforge\\\\envs\\\\companion-ai\\\\python.exe' 'D:\\\\桌面\\\\GitHub\\\\Jianyu-is-learning\\\\companion-ai\\\\test_p1.py'\" 2>&1)"
+      "Bash(powershell.exe -Command \"& 'D:\\\\miniforge\\\\envs\\\\companion-ai\\\\python.exe' 'D:\\\\桌面\\\\GitHub\\\\Jianyu-is-learning\\\\companion-ai\\\\test_p1.py'\" 2>&1)",
+      "Bash(curl:*)"
     ]
   }
 }

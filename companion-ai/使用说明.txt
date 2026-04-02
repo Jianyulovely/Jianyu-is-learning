@@ -1,30 +1,39 @@
 Companion AI 使用说明
 ======================
-版本：P1 | 更新：2026-03-28
+版本：P1 (Ollama) | 更新：2026-04-02
 
 
 一、环境要求
 --------------
-- Windows 本地电脑（运行 Bot、Redis、SSH 隧道）
+- Windows 本地电脑
 - conda 环境：companion-ai（Python 3.12）
-- 远程 GPU 服务器已运行 FastAPI LLM 服务（llm/api.py）
+- Ollama 已安装并运行（管理本地 LLM 模型）
+- Redis 服务
 
 
 二、首次启动（按顺序执行）
 --------------------------
 
-步骤 1：激活 conda 环境并安装依赖（仅首次需要）
+步骤 1：安装 Ollama 并下载模型（仅首次需要）
+    1. 访问 https://ollama.ai 下载并安装 Ollama
+    2. 下载模型：
+       ollama pull qwen2.5:0.5b
+    3. 验证 Ollama 服务：
+       curl http://localhost:11434/api/tags
+
+步骤 2：激活 conda 环境并安装依赖（仅首次需要）
     conda activate companion-ai
     pip install -r requirements.txt
 
-步骤 2：启动 Redis
+步骤 3：启动 Redis
     D:\software\Redis\redis-server.exe D:\software\Redis\redis.windows.conf
 
-步骤 3：建立 SSH 隧道（保持此终端窗口开启）
-    python companion-ai/tunnel.py
-    看到 "Tunnel listening on localhost:15000" 说明隧道就绪
+步骤 4：启动 LLM API 封装层（新开一个终端）
+    conda activate companion-ai
+    python companion-ai/llm/api.py
+    看到 "Application startup complete" 说明 API 服务已启动（端口 8000）
 
-步骤 4：启动 Bot（新开一个终端）
+步骤 5：启动 Bot（新开一个终端）
     conda activate companion-ai
     python companion-ai/main.py
     看到 "Application started" 说明 Bot 已连接 Telegram
@@ -32,15 +41,21 @@ Companion AI 使用说明
 
 三、日常启动（已安装依赖后）
 ------------------------------
-每次使用只需执行步骤 2、3、4，顺序不能颠倒。
-隧道和 Bot 各占一个终端窗口，关闭窗口即停止服务。
+每次使用需执行：
+1. 确保 Ollama 服务运行中（通常开机自启）
+2. 启动 Redis（步骤 3）
+3. 启动 LLM API 封装层（步骤 4）
+4. 启动 Bot（步骤 5）
+
+顺序不能颠倒。API 服务和 Bot 各占一个终端窗口。
 
 
 四、停止服务
 ------------
-关闭 tunnel.py 终端窗口 → Bot 自动失联
+关闭 llm/api.py 终端窗口 → API 服务停止
 关闭 main.py 终端窗口 → Bot 停止
 关闭 redis-server 终端窗口 → Redis 停止（会话数据不会丢失，已持久化到 SQLite）
+Ollama 服务可保持运行
 
 
 五、Bot 指令列表
@@ -64,26 +79,47 @@ Redis 缓存：localhost:6379
 七、常见问题
 ------------
 Q：Bot 没有回复？
-A：检查隧道是否在运行。在新终端执行：
-    curl http://localhost:15000/health
-   返回 {"status":"ok"} 则隧道正常，否则重启 tunnel.py
+A：检查 API 服务是否在运行。在新终端执行：
+    curl http://localhost:8000/health
+   返回 {"status":"ok"} 则服务正常，否则重启 llm/api.py
+
+Q：API 服务启动失败？
+A：检查 Ollama 是否运行：
+    curl http://localhost:11434/api/tags
+   如果失败，启动 Ollama 服务
 
 Q：回复乱码或提示"好像有点问题"？
-A：LLM 服务可能超时，稍等重试；或重启 tunnel.py 和 main.py
+A：LLM 服务可能超时，稍等重试；或重启 llm/api.py 和 main.py
 
 Q：重启 Bot 后是否记得之前的对话？
 A：是。对话历史持久化在 SQLite，重启后自动恢复。
+
+Q：如何切换模型？
+A：修改 .env 文件中的 OLLAMA_MODEL，然后重启 llm/api.py
+   示例：OLLAMA_MODEL=qwen2.5:1.5b
 
 Q：如何彻底清空一个用户的数据？
 A：目前无指令，需手动删除 data/companion.db 文件（会清空所有用户数据）
 
 
-八、文件结构说明
+八、环境变量说明（.env 文件）
+------------------------------
+TELEGRAM_BOT_TOKEN      Telegram Bot Token
+ADMIN_USER_IDS          管理员用户 ID（逗号分隔）
+LLM_API_URL             LLM API 封装层地址（默认 http://127.0.0.1:8000）
+OLLAMA_GEN_URL          Ollama generate 接口地址
+OLLAMA_MODEL            使用的模型名称
+MAX_HISTORY_TURNS       对话历史保留轮数
+DEFAULT_ROLE            默认角色 ID
+
+
+九、文件结构说明
 ----------------
 main.py             Bot 启动入口
-tunnel.py           SSH 本地端口转发（15000→远程:8000）
 config.py           配置读取（从 .env 加载）
 .env                环境变量（Token、LLM地址等，勿提交 git）
+llm/
+  api.py                FastAPI 封装 Ollama（端口 8000）
 bot/handler.py      消息处理、指令路由
 core/
   emotion_detector.py   情绪识别
@@ -96,3 +132,12 @@ roles/personas/
   jiejie.yaml           角色配置文件
 data/
   companion.db          SQLite 数据库（自动创建）
+
+
+十、架构说明
+------------
+旧架构：直接加载模型到 GPU → 需要 SSH 隧道 → 部署复杂
+新架构：Ollama 管理模型 → FastAPI 封装层 → 本地部署 → 简单灵活
+
+数据流：
+Telegram → Bot (main.py) → API 封装层 (llm/api.py) → Ollama → 模型推理

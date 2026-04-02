@@ -37,21 +37,30 @@ def _load_role(role_id: str) -> dict:
 # ── LLM API 调用 ──────────────────────────────────────────────────────────────
 
 async def _call_llm(system_prompt: str, history: list[dict]) -> str:
-    messages = [{"role": "system", "content": system_prompt}] + history
+    # 手动拼接提示词
+    prompt_parts = [f"System: {system_prompt}\n\n"]
+    for msg in history:
+        role = msg["role"]
+        content = msg["content"]
+        if role == "user":
+            prompt_parts.append(f"User: {content}\n")
+        elif role == "assistant":
+            prompt_parts.append(f"Assistant: {content}\n")
+    prompt_parts.append("Assistant: ")
+    full_prompt = "".join(prompt_parts)
+
     payload = {
-        "messages": messages,
+        "prompt": full_prompt,
         "max_new_tokens": 200,
         "temperature": 0.85,
         "top_p": 0.9,
         "repetition_penalty": 1.1,
     }
-    # local_address="0.0.0.0" 强制 IPv4，防止 localhost→IPv6 导致 tunnel 502
-    transport = httpx.AsyncHTTPTransport(local_address="0.0.0.0")
-    async with httpx.AsyncClient(timeout=120.0, transport=transport) as client:
+
+    async with httpx.AsyncClient(timeout=120.0) as client:
         resp = await client.post(
-            f"{config.LLM_API_URL}/chat",
+            f"{config.LLM_API_URL}/generate",
             json=payload,
-            headers={"Connection": "close"},  # ⚠ 禁用连接复用，防止 SSH 隧道 502
         )
         resp.raise_for_status()
         return resp.json()["reply"]
