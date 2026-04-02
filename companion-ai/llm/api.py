@@ -98,6 +98,7 @@ async def chat(req: ChatRequest):
     return ChatResponse(reply=reply, usage=usage)
 
 
+# health改为检测ollama服务状态
 @app.get("/health")
 async def health():
     mem_allocated = torch.cuda.memory_allocated() / 1024**3

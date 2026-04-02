@@ -1,4 +1,4 @@
-﻿import os
+import os
 import logging
 import httpx
 from telegram import Update
@@ -22,7 +22,7 @@ logging.basicConfig(
     level=logging.INFO
 )
 
-
+# 使用ollama/generate 功能，输入输出可以参考官方api
 async def ask_llm(prompt: str) -> str:
     try:
         logging.info(f"LLM_URL: {LLM_URL}")
@@ -31,9 +31,9 @@ async def ask_llm(prompt: str) -> str:
 
         async with httpx.AsyncClient(timeout=60) as client:
             response = await client.post(
-                f"{LLM_URL}/chat",
+                f"{LLM_URL}/generate",
                 json={
-                    "messages": [{"role": "user", "content": prompt}],
+                    "content": prompt,
                     "stream": False
                 },
                 headers={"Authorization": f"Bearer {API_TOKEN}"} 
@@ -43,7 +43,7 @@ async def ask_llm(prompt: str) -> str:
             response.raise_for_status()
             # FastAPI 非流式时直接返回 Ollama 的响应
             data = response.json()
-            return data["message"]["content"]
+            return data["response"]
     except Exception as e:
         logging.error(f"调用 LLM 失败: {type(e).__name__}: {e}")
         return "⚠️ LLM 服务暂时无法访问，请稍后再试。"

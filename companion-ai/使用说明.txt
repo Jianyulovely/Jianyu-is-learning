@@ -21,12 +21,12 @@ Companion AI 使用说明
     D:\software\Redis\redis-server.exe D:\software\Redis\redis.windows.conf
 
 步骤 3：建立 SSH 隧道（保持此终端窗口开启）
-    python tunnel.py
+    python companion-ai/tunnel.py
     看到 "Tunnel listening on localhost:15000" 说明隧道就绪
 
 步骤 4：启动 Bot（新开一个终端）
     conda activate companion-ai
-    python main.py
+    python companion-ai/main.py
     看到 "Application started" 说明 Bot 已连接 Telegram
 
 

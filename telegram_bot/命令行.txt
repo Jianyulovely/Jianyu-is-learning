@@ -31,7 +31,19 @@ python telegram_bot/tg_bot.py
 
 4. 测试python-telegram-bot这个包是否能用（能联通到电报）
 
+
 5. 消息转发配置坑：
 连接复用
 keep-alive + SSH 隧道 → 非常容易 502
 解决：headers={"Connection": "close"}
+
+6. 我的电脑本地运行ollama，能跑qwen-2.5-0.5b模型！直接不用ssh步骤了！
+重新封装一下模型，直接本地就能运行。api使用方式可以查阅https://docs.ollama.com/api/introduction
+
+7. 旧进程没有清理，端口被占用
+多次启动 main.py 没有正确关闭旧进程，导致 1212 端口同时有两个进程在监听，
+新请求行为异常。以后重启服务前先用 netstat -ano | findstr 端口号 确认端口干净。
+使用方式：
+netstat -ano | findstr 端口号
+netstat -ano | findstr 1212
+taskkill /PID 进程号 /F
