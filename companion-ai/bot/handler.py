@@ -1,9 +1,9 @@
 """
-Telegram Bot Handler —— P0 MVP
-职责：接收消息 → 维护内存会话 → 调用 LLM API → 回复用户
+Telegram Bot Handler —— P1
+职责：接收消息 → SessionManager 加载上下文 → EmotionDetector 分析情绪
+      → PromptEngine 组装请求 → 调用 LLM API → PostProcess → 回复用户
 """
 import logging
-from pathlib import Path
 
 import httpx
 import yaml
@@ -17,87 +17,60 @@ from telegram.ext import (
 )
 
 from config import config
+from core.emotion_detector import detect as detect_emotion
+from core.prompt_engine import PromptEngine
+from core.session_manager import SessionManager
+from db.models import init_db
 
 logger = logging.getLogger(__name__)
 
-# ── 角色配置加载 ──────────────────────────────────────────────────────────────
+_session = SessionManager()
+_prompt_engine = PromptEngine()
 
-def _load_role(role_name: str) -> dict:
-    path = config.ROLES_DIR / f"{role_name}.yaml"
+
+def _load_role(role_id: str) -> dict:
+    path = config.ROLES_DIR / f"{role_id}.yaml"
     with open(path, "r", encoding="utf-8") as f:
         return yaml.safe_load(f)
 
 
-ROLE = _load_role(config.DEFAULT_ROLE)
-
-
-def _build_system_prompt() -> str:
-    """P0：固定 system prompt = 基础人设 + few-shot"""
-    lines = [ROLE["base_prompt"].strip(), ""]
-    lines.append("以下是一些对话示例：")
-    for ex in ROLE.get("few_shot", []):
-        lines.append(f"用户：{ex['user']}")
-        lines.append(f"{ROLE['name']}：{ex['assistant']}")
-    return "\n".join(lines)
-
-
-SYSTEM_PROMPT = _build_system_prompt()
-
-# ── 内存会话（P0 简化版，key = user_id） ──────────────────────────────────────
-# 每个用户保存最近 MAX_HISTORY_TURNS * 2 条消息（user + assistant 各算1条）
-_sessions: dict[int, list[dict]] = {}
-
-
-def _get_history(user_id: int) -> list[dict]:
-    return _sessions.setdefault(user_id, [])
-
-
-def _append_history(user_id: int, role: str, content: str):
-    history = _get_history(user_id)
-    history.append({"role": role, "content": content})
-    max_msgs = config.MAX_HISTORY_TURNS * 2
-    if len(history) > max_msgs:
-        _sessions[user_id] = history[-max_msgs:]
-
-
 # ── LLM API 调用 ──────────────────────────────────────────────────────────────
 
-async def _call_llm(user_id: int, user_text: str) -> str:
-
-    _append_history(user_id, "user", user_text)
-
-    messages = [{"role": "system", "content": SYSTEM_PROMPT}] + _get_history(user_id)
+async def _call_llm(system_prompt: str, history: list[dict]) -> str:
+    # 手动拼接提示词
+    prompt_parts = [f"System: {system_prompt}\n\n"]
+    for msg in history:
+        role = msg["role"]
+        content = msg["content"]
+        if role == "user":
+            prompt_parts.append(f"User: {content}\n")
+        elif role == "assistant":
+            prompt_parts.append(f"Assistant: {content}\n")
+    prompt_parts.append("Assistant: ")
+    full_prompt = "".join(prompt_parts)
 
     payload = {
-        "messages": messages,
+        "prompt": full_prompt,
         "max_new_tokens": 200,
         "temperature": 0.85,
         "top_p": 0.9,
         "repetition_penalty": 1.1,
     }
 
-    async with httpx.AsyncClient(
-            timeout=120.0,
-            transport=httpx.AsyncHTTPTransport(retries=1)
-        ) as client:
+    async with httpx.AsyncClient(timeout=120.0) as client:
         resp = await client.post(
-                    f"{config.LLM_API_URL}/chat", 
-                    json=payload, 
-                    headers={"Connection": "close"}   # 👉 禁用连接复用（关键）
-                )
+            f"{config.LLM_API_URL}/generate",
+            json=payload,
+        )
         resp.raise_for_status()
-        data = resp.json()
+        return resp.json()["reply"]
 
-    reply: str = data["reply"]
 
-    # Post-process: 过滤禁用短语，必要时截断
-    for phrase in ROLE.get("forbidden_phrases", []):
+def _post_process(reply: str, role: dict) -> str:
+    for phrase in role.get("forbidden_phrases", []):
         if phrase in reply:
-            logger.warning("Forbidden phrase detected, returning fallback.")
-            reply = "嗯……有点走神了，你刚才说什么来着？"
-            break
-
-    _append_history(user_id, "assistant", reply)
+            logger.warning("Forbidden phrase detected, using fallback.")
+            return "嗯……有点走神了，你刚才说什么来着？"
     return reply
 
 
@@ -105,6 +78,10 @@ async def _call_llm(user_id: int, user_text: str) -> str:
 
 async def cmd_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
+    user_id = user.id
+    username = user.username or user.first_name or ""
+
+    await _session.ensure_user(user_id, username)
     name = user.first_name or "你"
     await update.message.reply_text(
         f"嗨，{name}～我是惠惠。有什么想聊的嘛，直接说就好。"
@@ -113,15 +90,46 @@ async def cmd_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def cmd_reset(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
-    _sessions.pop(user_id, None)
+    r = __import__("db.redis_client", fromlist=["get_redis"]).get_redis()
+    await r.delete(f"session:{user_id}:history")
+    await r.delete(f"session:{user_id}:state")
     await update.message.reply_text("好，我们重新开始聊吧～")
+
+
+async def cmd_me(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = update.effective_user.id
+    args = context.args
+    if not args:
+        await update.message.reply_text("用法：/me 你的昵称")
+        return
+    nickname = " ".join(args)
+    await _session.set_nickname(user_id, nickname)
+    await update.message.reply_text(f"好，我以后叫你{nickname}～")
+
+
+async def cmd_profile(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = update.effective_user.id
+    user = await _session.get_user(user_id)
+    intimacy = await _session.get_intimacy(user_id)
+    if not user:
+        await update.message.reply_text("还没注册，先发 /start 吧～")
+        return
+    nickname = user.get("nickname") or user.get("username") or "未设置"
+    text = (
+        f"角色：{user['role_id']}\n"
+        f"昵称：{nickname}\n"
+        f"亲密度：{intimacy}/100"
+    )
+    await update.message.reply_text(text)
 
 
 async def cmd_help(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = (
-        "/start  —  开始对话\n"
-        "/reset  —  清除当前会话记录\n"
-        "/help   —  查看指令列表"
+        "/start      —  开始对话\n"
+        "/me [昵称]  —  设置你的昵称\n"
+        "/profile    —  查看角色与亲密度\n"
+        "/reset      —  清除当前会话\n"
+        "/help       —  查看指令列表"
     )
     await update.message.reply_text(text)
 
@@ -129,35 +137,76 @@ async def cmd_help(update: Update, context: ContextTypes.DEFAULT_TYPE):
 # ── 普通消息处理 ──────────────────────────────────────────────────────────────
 
 async def on_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user_id = update.effective_user.id
+    user = update.effective_user
+    user_id = user.id
     text = update.message.text.strip()
-
     if not text:
         return
 
-    # 发送"正在输入"状态
-    await context.bot.send_chat_action(
-        chat_id=update.effective_chat.id, action="typing"
+    await context.bot.send_chat_action(chat_id=update.effective_chat.id, action="typing")
+
+    # 确保用户存在
+    await _session.ensure_user(user_id, user.username or user.first_name or "")
+
+    # 情绪检测
+    emotion = detect_emotion(text)
+
+    # 加载历史 & 状态
+    history = await _session.get_history(user_id)
+    intimacy = await _session.get_intimacy(user_id)
+    db_user = await _session.get_user(user_id)
+    user_name = (db_user or {}).get("nickname") or user.first_name or "你"
+    role_id = (db_user or {}).get("role_id", config.DEFAULT_ROLE)
+    role = _load_role(role_id)
+
+    # 追加用户消息到历史
+    await _session.append_message(user_id, "user", text, emotion.tag)
+    history = await _session.get_history(user_id)
+
+    # 组装 system prompt
+    system_prompt = _prompt_engine.build_system_prompt(
+        role_id=role_id,
+        user_name=user_name,
+        emotion=emotion,
+        intimacy_level=intimacy,
     )
 
     try:
-        reply = await _call_llm(user_id, text)
+        reply = await _call_llm(system_prompt, history)
+        reply = _post_process(reply, role)
     except Exception as e:
         logger.error(f"LLM call failed: {e}")
         reply = "哎，好像有点问题，稍等一下再试试？"
+
+    # 保存 assistant 回复 & 更新状态
+    await _session.append_message(user_id, "assistant", reply)
+    await _session.bump_intimacy(user_id, emotion.tag)
+    await _session.update_state(user_id, emotion_tag=emotion.tag)
 
     await update.message.reply_text(reply)
 
 
 # ── 构建 Application ──────────────────────────────────────────────────────────
 
+async def on_startup(app: Application):
+    await init_db()
+    logger.info("Database initialized.")
+
+
 def build_application() -> Application:
     if not config.TELEGRAM_BOT_TOKEN:
         raise ValueError("TELEGRAM_BOT_TOKEN is not set in .env")
 
-    app = Application.builder().token(config.TELEGRAM_BOT_TOKEN).build()
+    app = (
+        Application.builder()
+        .token(config.TELEGRAM_BOT_TOKEN)
+        .post_init(on_startup)
+        .build()
+    )
     app.add_handler(CommandHandler("start", cmd_start))
     app.add_handler(CommandHandler("reset", cmd_reset))
+    app.add_handler(CommandHandler("me", cmd_me))
+    app.add_handler(CommandHandler("profile", cmd_profile))
     app.add_handler(CommandHandler("help", cmd_help))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, on_message))
     return app
