@@ -43,6 +43,7 @@ class SessionManager:
         r = get_redis()
         key = _history_key(user_id)
 
+        # 将本次对话内容加入redis中对话历史中，并根据最大轮数进行截断
         history = await self.get_history(user_id)
         history.append({"role": role, "content": content})
         if len(history) > MAX_HISTORY_MSGS:
@@ -123,7 +124,7 @@ class SessionManager:
 
     # ── 用户注册 ──────────────────────────────────────────────────────────────
 
-    async def ensure_user(self, user_id: int, username: str = "", role_id: str = "jiejie"):
+    async def ensure_user(self, user_id: int, username: str = "", role_id: str = "Alex"):
         try:
             async with aiosqlite.connect(DB_PATH) as db:
                 await db.execute(
@@ -146,6 +147,19 @@ class SessionManager:
         except Exception as e:
             logger.warning(f"get_user failed: {e}")
             return None
+
+    async def set_role(self, user_id: int, role_id: str):
+        try:
+            async with aiosqlite.connect(DB_PATH) as db:
+                await db.execute("UPDATE users SET role_id=? WHERE user_id=?", (role_id, user_id))
+                await db.commit()
+        except Exception as e:
+            logger.warning(f"set_role failed: {e}")
+
+    async def clear_history(self, user_id: int):
+        r = get_redis()
+        await r.delete(f"session:{user_id}:history")
+        await r.delete(f"session:{user_id}:state")
 
     async def set_nickname(self, user_id: int, nickname: str):
         try:

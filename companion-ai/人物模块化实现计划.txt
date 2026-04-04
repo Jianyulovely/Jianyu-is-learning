@@ -1,0 +1,105 @@
+# 人物模块化 / 可插拔切换
+
+## Context
+用户希望在对话中能够切换 AI 角色（人物），实现"人物可插拔更换"效果。
+现有代码已有角色配置文件（yaml）、role_id 数据库字段、角色加载逻辑，唯独缺少切换命令。
+
+## 改动范围（最小化）
+
+### 1. companion-ai/core/session_manager.py
+
+在 set_nickname() 之后新增两个方法：
+
+    async def set_role(self, user_id: int, role_id: str):
+        try:
+            async with aiosqlite.connect(DB_PATH) as db:
+                await db.execute("UPDATE users SET role_id=? WHERE user_id=?", (role_id, user_id))
+                await db.commit()
+        except Exception as e:
+            logger.warning(f"set_role failed: {e}")
+
+    async def clear_history(self, user_id: int):
+        r = get_redis()
+        await r.delete(f"session:{user_id}:history")
+        await r.delete(f"session:{user_id}:state")
+
+注：clear_history 复用 cmd_reset 中已有的 Redis 删除逻辑，提取为可复用方法。
+
+---
+
+### 2. companion-ai/bot/handler.py
+
+新增辅助函数（放在 _load_role 旁边）：
+
+    def _list_roles() -> list[str]:
+        return [p.stem for p in config.ROLES_DIR.glob("*.yaml")]
+
+新增两个命令处理函数（放在 cmd_help 之前）：
+
+    async def cmd_roles(update: Update, context: ContextTypes.DEFAULT_TYPE):
+        roles = _list_roles()
+        await update.message.reply_text("可用角色：\n" + "\n".join(f"• {r}" for r in roles))
+
+    async def cmd_switch(update: Update, context: ContextTypes.DEFAULT_TYPE):
+        user_id = update.effective_user.id
+        args = context.args
+        if not args:
+            await update.message.reply_text("用法：/switch <角色ID>，用 /roles 查看可用角色")
+            return
+        role_id = args[0].lower()
+        if role_id not in _list_roles():
+            await update.message.reply_text(f"角色 '{role_id}' 不存在，用 /roles 查看可用角色")
+            return
+        await _session.set_role(user_id, role_id)
+        await _session.clear_history(user_id)
+        role = _load_role(role_id)
+        greeting = role.get("greeting", "嗨～换新角色了，有什么想聊的吗？")
+        await update.message.reply_text(greeting)
+
+在 build_application() 中注册：
+
+    app.add_handler(CommandHandler("roles", cmd_roles))
+    app.add_handler(CommandHandler("switch", cmd_switch))
+
+更新 cmd_help 文本，加入两行：
+
+    /roles           —  查看可用角色
+    /switch [角色ID] —  切换角色
+
+---
+
+### 3. 角色 yaml 文件（已完成）
+
+各角色 yaml 已添加 greeting 字段，主语使用 name 字段中的人物名称，
+同时 base_prompt、few_shot、active_greetings 中的自称也已统一为 name：
+
+    # Alex.yaml
+    greeting: "Alex来了～有什么想聊的吗？"
+    base_prompt: 你是Alex，26岁...
+
+    # Natasha.yaml
+    greeting: "Natasha来啦～主人有什么想聊的吗？"
+    base_prompt: 你是Natasha，23岁...
+
+---
+
+## 改动汇总
+
+文件                          | 改动                                              | 行数
+------------------------------|---------------------------------------------------|------
+core/session_manager.py       | 新增 set_role() + clear_history()                 | ~15 行
+bot/handler.py                | 新增 _list_roles()、cmd_roles()、cmd_switch()，   | ~25 行
+                              | 注册 2 个 handler，更新 help                      |
+roles/personas/*.yaml         | 可选：各加 greeting: 一行                         | 2 行
+
+不需要改数据库 schema（role_id 字段已存在）。
+
+---
+
+## 验证
+
+1. 启动 bot，发送 /roles        → 应列出 jiejie、meowmeow
+2. 发送 /switch meowmeow        → 应收到 meowmeow 的问候语，历史清空
+3. 发送一条消息                 → 应以 meowmeow 角色回复
+4. 发送 /profile                → 角色字段应显示 meowmeow
+5. 发送 /switch invalid         → 应提示角色不存在

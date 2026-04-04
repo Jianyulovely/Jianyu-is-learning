@@ -12,7 +12,7 @@ CREATE TABLE IF NOT EXISTS users (
     user_id     INTEGER PRIMARY KEY,
     username    TEXT,
     nickname    TEXT,
-    role_id     TEXT    NOT NULL DEFAULT 'jiejie',
+    role_id     TEXT    NOT NULL DEFAULT 'Alex',
     created_at  REAL    NOT NULL DEFAULT (unixepoch()),
     last_active_at REAL NOT NULL DEFAULT (unixepoch())
 );

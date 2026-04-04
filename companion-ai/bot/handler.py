@@ -28,6 +28,10 @@ _session = SessionManager()
 _prompt_engine = PromptEngine()
 
 
+def _list_roles() -> list[str]:
+    return [p.stem for p in config.ROLES_DIR.glob("*.yaml")]
+
+
 def _load_role(role_id: str) -> dict:
     path = config.ROLES_DIR / f"{role_id}.yaml"
     with open(path, "r", encoding="utf-8") as f:
@@ -66,6 +70,7 @@ async def _call_llm(system_prompt: str, history: list[dict]) -> str:
         return resp.json()["reply"]
 
 
+# 对于llm返回内容，根据违禁词表进行过滤
 def _post_process(reply: str, role: dict) -> str:
     for phrase in role.get("forbidden_phrases", []):
         if phrase in reply:
@@ -90,9 +95,7 @@ async def cmd_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def cmd_reset(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
-    r = __import__("db.redis_client", fromlist=["get_redis"]).get_redis()
-    await r.delete(f"session:{user_id}:history")
-    await r.delete(f"session:{user_id}:state")
+    await _session.clear_history(user_id)
     await update.message.reply_text("好，我们重新开始聊吧～")
 
 
@@ -123,13 +126,37 @@ async def cmd_profile(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(text)
 
 
+async def cmd_roles(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    roles = _list_roles()
+    await update.message.reply_text("可用角色：\n" + "\n".join(f"• {r}" for r in roles))
+
+
+async def cmd_switch(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = update.effective_user.id
+    args = context.args
+    if not args:
+        await update.message.reply_text("用法：/switch <角色ID>，用 /roles 查看可用角色")
+        return
+    role_id = args[0]
+    if role_id not in _list_roles():
+        await update.message.reply_text(f"角色 '{role_id}' 不存在，用 /roles 查看可用角色")
+        return
+    await _session.set_role(user_id, role_id)
+    await _session.clear_history(user_id)
+    role = _load_role(role_id)
+    greeting = role.get("greeting", "嗨～换新角色了，有什么想聊的吗？")
+    await update.message.reply_text(greeting)
+
+
 async def cmd_help(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = (
-        "/start      —  开始对话\n"
-        "/me [昵称]  —  设置你的昵称\n"
-        "/profile    —  查看角色与亲密度\n"
-        "/reset      —  清除当前会话\n"
-        "/help       —  查看指令列表"
+        "/start           —  开始对话\n"
+        "/me [昵称]       —  设置你的昵称\n"
+        "/profile         —  查看角色与亲密度\n"
+        "/roles           —  查看可用角色\n"
+        "/switch [角色ID] —  切换角色\n"
+        "/reset           —  清除当前会话\n"
+        "/help            —  查看指令列表"
     )
     await update.message.reply_text(text)
 
@@ -203,10 +230,14 @@ def build_application() -> Application:
         .post_init(on_startup)
         .build()
     )
+
+    # 用于用户在对话框中输入指令进行响应
     app.add_handler(CommandHandler("start", cmd_start))
     app.add_handler(CommandHandler("reset", cmd_reset))
     app.add_handler(CommandHandler("me", cmd_me))
     app.add_handler(CommandHandler("profile", cmd_profile))
+    app.add_handler(CommandHandler("roles", cmd_roles))
+    app.add_handler(CommandHandler("switch", cmd_switch))
     app.add_handler(CommandHandler("help", cmd_help))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, on_message))
     return app
