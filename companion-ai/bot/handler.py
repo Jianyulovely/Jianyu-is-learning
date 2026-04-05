@@ -89,7 +89,7 @@ async def cmd_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await _session.ensure_user(user_id, username)
     name = user.first_name or "你"
     await update.message.reply_text(
-        f"嗨，{name}～我是惠惠。有什么想聊的嘛，直接说就好。"
+        f"嗨，{name}～ 如果有什么想聊的话，直接说就好。"
     )
 
 
