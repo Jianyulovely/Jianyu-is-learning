@@ -3,6 +3,7 @@ Telegram Bot Handler —— P1
 职责：接收消息 → SessionManager 加载上下文 → EmotionDetector 分析情绪
       → PromptEngine 组装请求 → 调用 LLM API → PostProcess → 回复用户
 """
+import base64
 import logging
 
 import httpx
@@ -40,21 +41,35 @@ def _load_role(role_id: str) -> dict:
 
 # ── LLM API 调用 ──────────────────────────────────────────────────────────────
 
-async def _call_llm(system_prompt: str, history: list[dict]) -> str:
-    # 手动拼接提示词
-    prompt_parts = [f"System: {system_prompt}\n\n"]
-    for msg in history:
-        role = msg["role"]
-        content = msg["content"]
-        if role == "user":
-            prompt_parts.append(f"User: {content}\n")
-        elif role == "assistant":
-            prompt_parts.append(f"Assistant: {content}\n")
-    prompt_parts.append("Assistant: ")
-    full_prompt = "".join(prompt_parts)
-
+async def _describe_image(image_b64: str) -> str:
+    """静默调用：让模型描述图片内容，结果不展示给用户。"""
     payload = {
-        "prompt": full_prompt,
+        "system_prompt": "你是一个图像内容分析助手。用简短客观的一两句话描述图片内容，只描述事实，不加情感或评价。",
+        "user_message": "描述这张图片的内容",
+        "images": [image_b64],
+        "context": [],
+        "max_new_tokens": 80,
+        "temperature": 0.3,
+        "top_p": 0.9,
+        "repetition_penalty": 1.1,
+    }
+    async with httpx.AsyncClient(timeout=60.0) as client:
+        resp = await client.post(f"{config.LLM_API_URL}/generate", json=payload)
+        resp.raise_for_status()
+        return resp.json()["reply"].strip()
+
+
+async def _call_llm(
+    system_prompt: str,
+    user_message: str,
+    images: list[str] = [],
+    context: list[int] = [],
+) -> tuple[str, list[int]]:
+    payload = {
+        "system_prompt": system_prompt,
+        "user_message": user_message,
+        "images": images,
+        "context": context,
         "max_new_tokens": 200,
         "temperature": 0.85,
         "top_p": 0.9,
@@ -67,7 +82,8 @@ async def _call_llm(system_prompt: str, history: list[dict]) -> str:
             json=payload,
         )
         resp.raise_for_status()
-        return resp.json()["reply"]
+        data = resp.json()
+        return data["reply"], data["context"]
 
 
 # 对于llm返回内容，根据违禁词表进行过滤
@@ -163,54 +179,100 @@ async def cmd_help(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 # ── 普通消息处理 ──────────────────────────────────────────────────────────────
 
-async def on_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def _handle_message(
+    update: Update,
+    context: ContextTypes.DEFAULT_TYPE,
+    user_message: str,
+    image_desc: str = "",
+):
+    """文字和图片消息的公共处理逻辑。"""
     user = update.effective_user
     user_id = user.id
-    text = update.message.text.strip()
-    if not text:
-        return
 
     await context.bot.send_chat_action(chat_id=update.effective_chat.id, action="typing")
 
-    # 确保用户存在
     await _session.ensure_user(user_id, user.username or user.first_name or "")
 
-    # 情绪检测
-    emotion = detect_emotion(text)
+    emotion = detect_emotion(user_message)
+    logger.info(f"[{user_id}] user: {user_message!r}  emotion: {emotion.tag}")
 
-    # 加载历史 & 状态
-    history = await _session.get_history(user_id)
     intimacy = await _session.get_intimacy(user_id)
     db_user = await _session.get_user(user_id)
     user_name = (db_user or {}).get("nickname") or user.first_name or "你"
     role_id = (db_user or {}).get("role_id", config.DEFAULT_ROLE)
     role = _load_role(role_id)
 
-    # 追加用户消息到历史
-    await _session.append_message(user_id, "user", text, emotion.tag)
-    history = await _session.get_history(user_id)
+    await _session.append_message(user_id, "user", user_message, emotion.tag)
 
-    # 组装 system prompt
     system_prompt = _prompt_engine.build_system_prompt(
         role_id=role_id,
         user_name=user_name,
         emotion=emotion,
         intimacy_level=intimacy,
+        image_context=image_desc,
     )
 
+    ollama_context = await _session.get_context(user_id)
+
     try:
-        reply = await _call_llm(system_prompt, history)
+        reply, new_context = await _call_llm(
+            system_prompt=system_prompt,
+            user_message=user_message,
+            context=ollama_context,
+        )
         reply = _post_process(reply, role)
     except Exception as e:
         logger.error(f"LLM call failed: {e}")
         reply = "哎，好像有点问题，稍等一下再试试？"
+        new_context = ollama_context
 
-    # 保存 assistant 回复 & 更新状态
+    if not reply.strip():
+        logger.warning(f"[{user_id}] empty reply from LLM, raw: {repr(reply)}")
+        reply = "嗯……刚才走神了，你再说一遍？"
+
+    logger.info(f"[{user_id}] bot ({role_id}): {reply!r}")
+
     await _session.append_message(user_id, "assistant", reply)
+    await _session.set_context(user_id, new_context)
     await _session.bump_intimacy(user_id, emotion.tag)
     await _session.update_state(user_id, emotion_tag=emotion.tag)
 
     await update.message.reply_text(reply)
+
+
+async def on_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    text = update.message.text.strip()
+    if not text:
+        return
+    await _handle_message(update, context, user_message=text)
+
+
+async def on_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = update.effective_user.id
+
+    # 取最高分辨率图片并转 base64
+    photo = update.message.photo[-1]
+    file = await context.bot.get_file(photo.file_id)
+    image_bytes = await file.download_as_bytearray()
+    image_b64 = base64.b64encode(image_bytes).decode("utf-8")
+
+    user_message = (update.message.caption or "").strip() or "你看这张图"
+
+    # 第一步：静默描述，结果不展示给用户
+    await context.bot.send_chat_action(chat_id=update.effective_chat.id, action="typing")
+    try:
+        image_desc = await _describe_image(image_b64)
+        logger.info(f"Image described for user {user_id}: {image_desc}")
+    except Exception as e:
+        logger.error(f"Image description failed: {e}")
+        image_desc = ""
+
+    if image_desc:
+        await _session.set_last_image_desc(user_id, image_desc)
+        await _session.save_image_memory(user_id, image_desc)
+
+    # 第二步：正常回复，描述通过 system prompt 注入
+    await _handle_message(update, context, user_message=user_message, image_desc=image_desc)
 
 
 # ── 构建 Application ──────────────────────────────────────────────────────────
@@ -240,4 +302,5 @@ def build_application() -> Application:
     app.add_handler(CommandHandler("switch", cmd_switch))
     app.add_handler(CommandHandler("help", cmd_help))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, on_message))
+    app.add_handler(MessageHandler(filters.PHOTO, on_photo))
     return app

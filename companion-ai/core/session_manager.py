@@ -27,6 +27,14 @@ def _state_key(user_id: int) -> str:
     return f"session:{user_id}:state"
 
 
+def _context_key(user_id: int) -> str:
+    return f"session:{user_id}:ollama_context"
+
+
+def _image_desc_key(user_id: int) -> str:
+    return f"session:{user_id}:last_image_desc"
+
+
 class SessionManager:
 
     # ── 历史记录 ──────────────────────────────────────────────────────────────
@@ -158,8 +166,43 @@ class SessionManager:
 
     async def clear_history(self, user_id: int):
         r = get_redis()
-        await r.delete(f"session:{user_id}:history")
-        await r.delete(f"session:{user_id}:state")
+        await r.delete(_history_key(user_id))
+        await r.delete(_state_key(user_id))
+        await r.delete(_context_key(user_id))
+        await r.delete(_image_desc_key(user_id))
+
+    # ── Ollama 多轮 context token ─────────────────────────────────────────────
+
+    async def get_context(self, user_id: int) -> list[int]:
+        r = get_redis()
+        raw = await r.get(_context_key(user_id))
+        return json.loads(raw) if raw else []
+
+    async def set_context(self, user_id: int, context: list[int]):
+        r = get_redis()
+        await r.set(_context_key(user_id), json.dumps(context), ex=SESSION_TTL)
+
+    # ── 图片描述缓存 ──────────────────────────────────────────────────────────
+
+    async def get_last_image_desc(self, user_id: int) -> str:
+        r = get_redis()
+        raw = await r.get(_image_desc_key(user_id))
+        return raw.decode() if raw else ""
+
+    async def set_last_image_desc(self, user_id: int, desc: str):
+        r = get_redis()
+        await r.set(_image_desc_key(user_id), desc, ex=SESSION_TTL)
+
+    async def save_image_memory(self, user_id: int, desc: str):
+        try:
+            async with aiosqlite.connect(DB_PATH) as db:
+                await db.execute(
+                    "INSERT INTO memories (user_id, content, importance) VALUES (?,?,?)",
+                    (user_id, f"[图片] {desc}", 2),
+                )
+                await db.commit()
+        except Exception as e:
+            logger.warning(f"save_image_memory failed: {e}")
 
     async def set_nickname(self, user_id: int, nickname: str):
         try:

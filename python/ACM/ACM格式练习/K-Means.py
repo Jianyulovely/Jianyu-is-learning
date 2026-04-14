@@ -107,6 +107,58 @@ for _ in range(I):
 for c in centers:
     print(f"{c[0]:.2f} {c[1]:.2f} {c[2]:.2f}")
 
+# ========================================================================================
+# 4.14又做了一次，空簇处理和小数保留忘了 
+from decimal import Decimal, ROUND_HALF_UP
+K = int(input())
+center = [list(map(int, input().split())) for _ in range(K)]
+N = int(input())
+m = int(input())
+position = [list(map(int, input().split())) for _ in range(m)]
+
+def dist(a, b):
+    return (a[0]-b[0])**2 + (a[1]-b[1])**2 + (a[2]-b[2])**2
+
+def get_center(a):
+    length = len(a)
+    x = 0
+    y = 0
+    z = 0
+    for i in range(length):
+        x += a[i][0]
+        y += a[i][1]
+        z += a[i][2]
+    return [x / length, y / length, z / length]
+
+
+def round_2(x):
+    d = Decimal(str(x))
+    return str(d.quantize(Decimal('0.01'), rounding = ROUND_HALF_UP))
+
+def show(x):
+    dim = len(x)
+    for i in range(dim):
+        print(*(round_2(x[i][j]) for j in range(3)))
+
+for _ in range(N):
+    cluster = [[] for _ in range(K)] 
+    # 数据点分配到距离最近的聚类中心所在的组
+    for i in range(m):
+        dis = []
+        for j in range(K):
+            dis.append(dist(position[i], center[j]))
+        min_index = dis.index(min(dis))
+        cluster[min_index].append(position[i])
+    
+    # 对每个组重新计算中心点
+    for i in range(K):
+        if len(cluster[i]) != 0:
+            center[i] = get_center(cluster[i])
+    
+show(center)
+
+    
+    
 
             
 

@@ -19,6 +19,7 @@ _INTIMACY_STYLE: list[tuple[int, str]] = [
 ]
 
 
+# 从人物卡片中加载
 def _load_role(role_id: str) -> dict:
     path = ROLES_DIR / f"{role_id}.yaml"
     with open(path, "r", encoding="utf-8") as f:
@@ -47,6 +48,7 @@ class PromptEngine:
         user_name: str,
         emotion: EmotionResult,
         intimacy_level: int,
+        image_context: str = "",
         memory_summary: str = "",
     ) -> str:
         role = self._get_role(role_id)
@@ -66,11 +68,15 @@ class PromptEngine:
         else:
             parts.append(emotion.tone_instruction)
 
-        # 4. 长期记忆（P2 注入，P1 阶段留空占位）
+        # 4. 当前图片上下文（本条消息携带的图片，静默描述结果）
+        if image_context:
+            parts.append(f"用户刚发来一张图片，内容是：{image_context}")
+
+        # 5. 长期记忆（P2 注入，P1 阶段留空占位）
         if memory_summary:
             parts.append(f"关于{user_name}你记得：{memory_summary}")
 
-        # 5. few-shot 示例
+        # 6. few-shot 示例
         few_shot = role.get("few_shot", [])
         if few_shot:
             parts.append("以下是一些对话示例：")
