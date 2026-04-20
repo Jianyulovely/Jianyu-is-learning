@@ -22,6 +22,7 @@ from config import config
 from core.emotion_detector import detect as detect_emotion
 from core.prompt_engine import PromptEngine
 from core.session_manager import SessionManager
+from core.tools import TOOL_DEFINITIONS, execute_tool
 from db.models import init_db
 
 logger = logging.getLogger(__name__)
@@ -66,22 +67,49 @@ async def _call_llm(
     messages: list[dict],
     images: list[str] = [],
 ) -> str:
-    payload = {
-        "system_prompt": system_prompt,
-        "messages": messages,
-        "images": images,
-        "temperature": 0.85,
-        "top_p": 0.9,
-    }
+    """Agentic loop：支持多轮工具调用，直到模型返回文字回复或达到上限。"""
+    loop_messages = list(messages)
 
-    async with httpx.AsyncClient(timeout=120.0) as client:
-        resp = await client.post(
-            f"{config.LLM_API_URL}/chat",
-            json=payload,
-        )
-        resp.raise_for_status()
-        data = resp.json()
-        return data["reply"]
+    for round_i in range(config.MAX_TOOL_ROUNDS):
+        payload = {
+            "system_prompt": system_prompt,
+            "messages": loop_messages,
+            "images": images if round_i == 0 else [],
+            "tools": TOOL_DEFINITIONS,
+            "temperature": 0.85,
+            "top_p": 0.9,
+        }
+        async with httpx.AsyncClient(timeout=120.0) as client:
+            resp = await client.post(f"{config.LLM_API_URL}/chat", json=payload)
+            resp.raise_for_status()
+            data = resp.json()
+
+        tool_calls = data.get("tool_calls", [])
+        reply = data.get("reply", "")
+
+        if not tool_calls:
+            return reply
+
+        # 把模型的 tool_call 指令追加进 messages
+        loop_messages.append({
+            "role": "assistant",
+            "content": "",
+            "tool_calls": tool_calls,
+        })
+
+        # 执行每个工具，把结果追加进 messages
+        for tc in tool_calls:
+            fn = tc.get("function", {})
+            name = fn.get("name", "")
+            arguments = fn.get("arguments", {})
+            logger.info(f"[tool] calling {name} args={arguments}")
+            result = await execute_tool(name, arguments)
+            logger.info(f"[tool] {name} result: {result[:100]!r}")
+            loop_messages.append({"role": "tool", "content": result})
+
+    # 达到最大轮数，返回最后一次文字内容（可能为空）
+    logger.warning("MAX_TOOL_ROUNDS reached, returning last reply")
+    return reply
 
 
 # 对于llm返回内容，根据违禁词表进行过滤
@@ -232,7 +260,16 @@ async def _handle_message(
     await _session.bump_intimacy(user_id, emotion.tag)
     await _session.update_state(user_id, emotion_tag=emotion.tag)
 
-    await update.message.reply_text(reply)
+    for attempt in range(3):
+        try:
+            await update.message.reply_text(reply)
+            break
+        except Exception as e:
+            if attempt == 2:
+                logger.error(f"[{user_id}] send failed after 3 attempts: {e}")
+            else:
+                logger.warning(f"[{user_id}] send attempt {attempt + 1} failed, retrying: {e}")
+                await asyncio.sleep(1)
 
 
 async def on_message(update: Update, context: ContextTypes.DEFAULT_TYPE):

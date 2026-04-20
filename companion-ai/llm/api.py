@@ -46,18 +46,21 @@ class GenerateResponse(BaseModel):
 class ChatMessage(BaseModel):
     role: str
     content: str
+    tool_calls: list[dict] = []
 
 
 class ChatRequest(BaseModel):
     system_prompt: str
     messages: list[ChatMessage]
     images: list[str] = []
+    tools: list[dict] = []
     temperature: float = 0.85
     top_p: float = 0.9
 
 
 class ChatResponse(BaseModel):
     reply: str
+    tool_calls: list[dict] = []
     usage: dict
 
 
@@ -125,6 +128,8 @@ async def chat(req: ChatRequest):
     ollama_messages = [{"role": "system", "content": req.system_prompt}]
     for i, m in enumerate(req.messages):
         msg = {"role": m.role, "content": m.content}
+        if m.tool_calls:
+            msg["tool_calls"] = m.tool_calls
         if req.images and i == len(req.messages) - 1 and m.role == "user":
             msg["images"] = req.images
         ollama_messages.append(msg)
@@ -138,17 +143,22 @@ async def chat(req: ChatRequest):
             "top_p": req.top_p,
         },
     }
+    if req.tools:
+        payload["tools"] = req.tools
 
     try:
         async with httpx.AsyncClient(timeout=120.0) as client:
             resp = await client.post(config.OLLAMA_CHAT_URL, json=payload)
             resp.raise_for_status()
             data = resp.json()
-            reply = data.get("message", {}).get("content", "")
-            logger.info(f"← reply: {reply!r}")
+            msg = data.get("message", {})
+            reply = msg.get("content", "")
+            tool_calls = msg.get("tool_calls", [])
+            logger.info(f"← reply: {reply!r}  tool_calls: {len(tool_calls)}")
 
             return ChatResponse(
                 reply=reply,
+                tool_calls=tool_calls,
                 usage={"input_tokens": 0, "output_tokens": 0},
             )
     except httpx.HTTPError as e:

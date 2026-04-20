@@ -21,6 +21,10 @@ class Config:
     OLLAMA_CHAT_URL: str = os.getenv("OLLAMA_CHAT_URL", "http://localhost:11434/api/chat")
     OLLAMA_MODEL: str = os.getenv("OLLAMA_MODEL", "qwen2.5:0.5b")
 
+    # Tools
+    TAVILY_API_KEY: str = os.getenv("TAVILY_API_KEY", "")
+    MAX_TOOL_ROUNDS: int = int(os.getenv("MAX_TOOL_ROUNDS", "3"))
+
     # Conversation
     MAX_HISTORY_TURNS: int = int(os.getenv("MAX_HISTORY_TURNS", "12"))
 
