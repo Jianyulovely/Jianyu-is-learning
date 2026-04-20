@@ -1,6 +1,6 @@
 """
 FastAPI LLM 推理服务 - Ollama 封装层
-端口 8000，提供 /generate、/health 接口。
+端口 8000，提供 /generate（图片描述）、/chat（多轮对话）、/health 接口。
 """
 import logging
 import sys
@@ -40,6 +40,24 @@ class GenerateRequest(BaseModel):
 class GenerateResponse(BaseModel):
     reply: str
     context: list[int]           # 透传给调用方，存入 Redis 供下轮使用
+    usage: dict
+
+
+class ChatMessage(BaseModel):
+    role: str
+    content: str
+
+
+class ChatRequest(BaseModel):
+    system_prompt: str
+    messages: list[ChatMessage]
+    images: list[str] = []
+    temperature: float = 0.85
+    top_p: float = 0.9
+
+
+class ChatResponse(BaseModel):
+    reply: str
     usage: dict
 
 
@@ -89,6 +107,49 @@ async def generate(req: GenerateRequest):
                 reply=reply,
                 context=data.get("context", []),
                 usage={"input_tokens": 0, "output_tokens": 0}
+            )
+    except httpx.HTTPError as e:
+        raise HTTPException(status_code=500, detail=f"Ollama request failed: {str(e)}")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/chat", response_model=ChatResponse)
+async def chat(req: ChatRequest):
+    if not req.messages:
+        raise HTTPException(status_code=400, detail="messages is empty")
+
+    logger.info(f"→ chat messages: {len(req.messages)} 条")
+    logger.info(f"→ system_prompt:\n{req.system_prompt}")
+
+    ollama_messages = [{"role": "system", "content": req.system_prompt}]
+    for i, m in enumerate(req.messages):
+        msg = {"role": m.role, "content": m.content}
+        if req.images and i == len(req.messages) - 1 and m.role == "user":
+            msg["images"] = req.images
+        ollama_messages.append(msg)
+
+    payload = {
+        "model": config.OLLAMA_MODEL,
+        "messages": ollama_messages,
+        "stream": False,
+        "options": {
+            "temperature": req.temperature,
+            "top_p": req.top_p,
+        },
+    }
+
+    try:
+        async with httpx.AsyncClient(timeout=120.0) as client:
+            resp = await client.post(config.OLLAMA_CHAT_URL, json=payload)
+            resp.raise_for_status()
+            data = resp.json()
+            reply = data.get("message", {}).get("content", "")
+            logger.info(f"← reply: {reply!r}")
+
+            return ChatResponse(
+                reply=reply,
+                usage={"input_tokens": 0, "output_tokens": 0},
             )
     except httpx.HTTPError as e:
         raise HTTPException(status_code=500, detail=f"Ollama request failed: {str(e)}")

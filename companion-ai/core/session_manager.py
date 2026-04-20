@@ -27,10 +27,6 @@ def _state_key(user_id: int) -> str:
     return f"session:{user_id}:state"
 
 
-def _context_key(user_id: int) -> str:
-    return f"session:{user_id}:ollama_context"
-
-
 def _image_desc_key(user_id: int) -> str:
     return f"session:{user_id}:last_image_desc"
 
@@ -168,19 +164,7 @@ class SessionManager:
         r = get_redis()
         await r.delete(_history_key(user_id))
         await r.delete(_state_key(user_id))
-        await r.delete(_context_key(user_id))
         await r.delete(_image_desc_key(user_id))
-
-    # ── Ollama 多轮 context token ─────────────────────────────────────────────
-
-    async def get_context(self, user_id: int) -> list[int]:
-        r = get_redis()
-        raw = await r.get(_context_key(user_id))
-        return json.loads(raw) if raw else []
-
-    async def set_context(self, user_id: int, context: list[int]):
-        r = get_redis()
-        await r.set(_context_key(user_id), json.dumps(context), ex=SESSION_TTL)
 
     # ── 图片描述缓存 ──────────────────────────────────────────────────────────
 

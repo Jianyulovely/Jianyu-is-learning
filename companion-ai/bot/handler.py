@@ -3,6 +3,7 @@ Telegram Bot Handler —— P1
 职责：接收消息 → SessionManager 加载上下文 → EmotionDetector 分析情绪
       → PromptEngine 组装请求 → 调用 LLM API → PostProcess → 回复用户
 """
+import asyncio
 import base64
 import logging
 
@@ -47,6 +48,7 @@ async def _describe_image(image_b64: str) -> str:
         "system_prompt": "你是一个图像内容分析助手。用简短客观的一两句话描述图片内容，只描述事实，不加情感或评价。",
         "user_message": "描述这张图片的内容",
         "images": [image_b64],
+        # 防止污染上下文
         "context": [],
         "max_new_tokens": 80,
         "temperature": 0.3,
@@ -61,29 +63,25 @@ async def _describe_image(image_b64: str) -> str:
 
 async def _call_llm(
     system_prompt: str,
-    user_message: str,
+    messages: list[dict],
     images: list[str] = [],
-    context: list[int] = [],
-) -> tuple[str, list[int]]:
+) -> str:
     payload = {
         "system_prompt": system_prompt,
-        "user_message": user_message,
+        "messages": messages,
         "images": images,
-        "context": context,
-        "max_new_tokens": 200,
         "temperature": 0.85,
         "top_p": 0.9,
-        "repetition_penalty": 1.1,
     }
 
     async with httpx.AsyncClient(timeout=120.0) as client:
         resp = await client.post(
-            f"{config.LLM_API_URL}/generate",
+            f"{config.LLM_API_URL}/chat",
             json=payload,
         )
         resp.raise_for_status()
         data = resp.json()
-        return data["reply"], data["context"]
+        return data["reply"]
 
 
 # 对于llm返回内容，根据违禁词表进行过滤
@@ -183,7 +181,7 @@ async def _handle_message(
     update: Update,
     context: ContextTypes.DEFAULT_TYPE,
     user_message: str,
-    image_desc: str = "",
+    images: list[str] = [],
 ):
     """文字和图片消息的公共处理逻辑。"""
     user = update.effective_user
@@ -209,22 +207,20 @@ async def _handle_message(
         user_name=user_name,
         emotion=emotion,
         intimacy_level=intimacy,
-        image_context=image_desc,
     )
 
-    ollama_context = await _session.get_context(user_id)
+    history = await _session.get_history(user_id)
 
     try:
-        reply, new_context = await _call_llm(
+        reply = await _call_llm(
             system_prompt=system_prompt,
-            user_message=user_message,
-            context=ollama_context,
+            messages=history,
+            images=images,
         )
         reply = _post_process(reply, role)
     except Exception as e:
         logger.error(f"LLM call failed: {e}")
         reply = "哎，好像有点问题，稍等一下再试试？"
-        new_context = ollama_context
 
     if not reply.strip():
         logger.warning(f"[{user_id}] empty reply from LLM, raw: {repr(reply)}")
@@ -233,7 +229,6 @@ async def _handle_message(
     logger.info(f"[{user_id}] bot ({role_id}): {reply!r}")
 
     await _session.append_message(user_id, "assistant", reply)
-    await _session.set_context(user_id, new_context)
     await _session.bump_intimacy(user_id, emotion.tag)
     await _session.update_state(user_id, emotion_tag=emotion.tag)
 
@@ -247,10 +242,21 @@ async def on_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await _handle_message(update, context, user_message=text)
 
 
+async def _save_image_desc_async(user_id: int, image_b64: str):
+    """后台任务：静默描述图片并写入记忆，不阻塞用户响应。"""
+    try:
+        desc = await _describe_image(image_b64)
+        if desc:
+            await _session.set_last_image_desc(user_id, desc)
+            await _session.save_image_memory(user_id, desc)
+            logger.info(f"[{user_id}] image desc saved: {desc}")
+    except Exception as e:
+        logger.error(f"[{user_id}] async image desc failed: {e}")
+
+
 async def on_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
 
-    # 取最高分辨率图片并转 base64
     photo = update.message.photo[-1]
     file = await context.bot.get_file(photo.file_id)
     image_bytes = await file.download_as_bytearray()
@@ -258,21 +264,11 @@ async def on_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     user_message = (update.message.caption or "").strip() or "你看这张图"
 
-    # 第一步：静默描述，结果不展示给用户
-    await context.bot.send_chat_action(chat_id=update.effective_chat.id, action="typing")
-    try:
-        image_desc = await _describe_image(image_b64)
-        logger.info(f"Image described for user {user_id}: {image_desc}")
-    except Exception as e:
-        logger.error(f"Image description failed: {e}")
-        image_desc = ""
+    # 单次推理：图片和文字一起传给模型
+    await _handle_message(update, context, user_message=user_message, images=[image_b64])
 
-    if image_desc:
-        await _session.set_last_image_desc(user_id, image_desc)
-        await _session.save_image_memory(user_id, image_desc)
-
-    # 第二步：正常回复，描述通过 system prompt 注入
-    await _handle_message(update, context, user_message=user_message, image_desc=image_desc)
+    # 后台异步：存图片描述到记忆，不阻塞
+    asyncio.create_task(_save_image_desc_async(user_id, image_b64))
 
 
 # ── 构建 Application ──────────────────────────────────────────────────────────

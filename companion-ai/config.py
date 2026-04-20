@@ -18,6 +18,7 @@ class Config:
 
     # Ollama
     OLLAMA_GEN_URL: str = os.getenv("OLLAMA_GEN_URL", "http://localhost:11434/api/generate")
+    OLLAMA_CHAT_URL: str = os.getenv("OLLAMA_CHAT_URL", "http://localhost:11434/api/chat")
     OLLAMA_MODEL: str = os.getenv("OLLAMA_MODEL", "qwen2.5:0.5b")
 
     # Conversation
