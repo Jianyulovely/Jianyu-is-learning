@@ -165,6 +165,12 @@ class SessionManager:
         await r.delete(_history_key(user_id))
         await r.delete(_state_key(user_id))
         await r.delete(_image_desc_key(user_id))
+        try:
+            async with aiosqlite.connect(DB_PATH) as db:
+                await db.execute("DELETE FROM conversations WHERE user_id=?", (user_id,))
+                await db.commit()
+        except Exception as e:
+            logger.warning(f"clear_history db failed: {e}")
 
     # ── 图片描述缓存 ──────────────────────────────────────────────────────────
 

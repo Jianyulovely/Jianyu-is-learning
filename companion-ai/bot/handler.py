@@ -20,10 +20,14 @@ from telegram.ext import (
 
 from config import config
 from core.emotion_detector import detect as detect_emotion
+from core.formatter import format_reply
+from core.http_client import safe_post
+import core.http_client as http_client
 from core.prompt_engine import PromptEngine
 from core.session_manager import SessionManager
-from core.tools import TOOL_DEFINITIONS, execute_tool
+from core.tools import execute_tool, select_tools
 from db.models import init_db
+from rag.indexer import scan_and_index
 
 logger = logging.getLogger(__name__)
 
@@ -56,60 +60,58 @@ async def _describe_image(image_b64: str) -> str:
         "top_p": 0.9,
         "repetition_penalty": 1.1,
     }
-    async with httpx.AsyncClient(timeout=60.0) as client:
-        resp = await client.post(f"{config.LLM_API_URL}/generate", json=payload)
-        resp.raise_for_status()
-        return resp.json()["reply"].strip()
+    resp = await safe_post(f"{config.LLM_API_URL}/generate", json=payload, timeout=60.0)
+    resp.raise_for_status()
+    return resp.json()["reply"].strip()
+
+
+async def _execute_selected_tools(tools: list[dict], user_message: str) -> str:
+    """预执行小模型选出的工具，并发调用后拼接为证据字符串。"""
+    if not tools:
+        return ""
+    results = await asyncio.gather(*[
+        execute_tool(t["function"]["name"], {"query": user_message})
+        for t in tools
+    ])
+    parts = []
+    for tool, result in zip(tools, results):
+        name = tool["function"]["name"]
+        logger.info(f"[tool_exec] {name} result preview: {result[:200]!r}")
+        parts.append(f"[{name}]\n{result}")
+    context = "\n\n".join(parts)
+    logger.info(f"[tool_context] total_len={len(context)}")
+    return context
 
 
 async def _call_llm(
     system_prompt: str,
     messages: list[dict],
     images: list[str] = [],
+    tool_context: str = "",
 ) -> str:
-    """Agentic loop：支持多轮工具调用，直到模型返回文字回复或达到上限。"""
-    loop_messages = list(messages)
+    effective_messages = list(messages)
 
-    for round_i in range(config.MAX_TOOL_ROUNDS):
-        payload = {
-            "system_prompt": system_prompt,
-            "messages": loop_messages,
-            "images": images if round_i == 0 else [],
-            "tools": TOOL_DEFINITIONS,
-            "temperature": 0.85,
-            "top_p": 0.9,
-        }
-        async with httpx.AsyncClient(timeout=120.0) as client:
-            resp = await client.post(f"{config.LLM_API_URL}/chat", json=payload)
-            resp.raise_for_status()
-            data = resp.json()
+    if tool_context:
+        system_prompt = system_prompt + "\n\n请优先基于[参考资料]回答，不要凭空猜测。"
+        if effective_messages and effective_messages[-1]["role"] == "user":
+            last = effective_messages[-1]
+            effective_messages[-1] = {
+                **last,
+                "content": f"[参考资料]\n{tool_context}\n\n---\n{last['content']}",
+            }
+        else:
+            effective_messages.append({"role": "user", "content": f"[参考资料]\n{tool_context}"})
 
-        tool_calls = data.get("tool_calls", [])
-        reply = data.get("reply", "")
-
-        if not tool_calls:
-            return reply
-
-        # 把模型的 tool_call 指令追加进 messages
-        loop_messages.append({
-            "role": "assistant",
-            "content": "",
-            "tool_calls": tool_calls,
-        })
-
-        # 执行每个工具，把结果追加进 messages
-        for tc in tool_calls:
-            fn = tc.get("function", {})
-            name = fn.get("name", "")
-            arguments = fn.get("arguments", {})
-            logger.info(f"[tool] calling {name} args={arguments}")
-            result = await execute_tool(name, arguments)
-            logger.info(f"[tool] {name} result: {result[:100]!r}")
-            loop_messages.append({"role": "tool", "content": result})
-
-    # 达到最大轮数，返回最后一次文字内容（可能为空）
-    logger.warning("MAX_TOOL_ROUNDS reached, returning last reply")
-    return reply
+    payload = {
+        "system_prompt": system_prompt,
+        "messages": effective_messages,
+        "images": images,
+        "temperature": 0.85,
+        "top_p": 0.9,
+    }
+    resp = await safe_post(f"{config.LLM_API_URL}/chat", json=payload)
+    resp.raise_for_status()
+    return resp.json().get("reply", "")
 
 
 # 对于llm返回内容，根据违禁词表进行过滤
@@ -237,15 +239,22 @@ async def _handle_message(
         intimacy_level=intimacy,
     )
 
-    history = await _session.get_history(user_id)
+    tools_schemas, history = await asyncio.gather(
+        select_tools(user_message),
+        _session.get_history(user_id),
+    )
+
+    tool_context = await _execute_selected_tools(tools_schemas, user_message)
 
     try:
         reply = await _call_llm(
             system_prompt=system_prompt,
             messages=history,
             images=images,
+            tool_context=tool_context,
         )
         reply = _post_process(reply, role)
+        reply = format_reply(reply)
     except Exception as e:
         logger.error(f"LLM call failed: {e}")
         reply = "哎，好像有点问题，稍等一下再试试？"
@@ -262,7 +271,7 @@ async def _handle_message(
 
     for attempt in range(3):
         try:
-            await update.message.reply_text(reply)
+            await update.message.reply_text(reply, parse_mode="HTML")
             break
         except Exception as e:
             if attempt == 2:
@@ -312,7 +321,14 @@ async def on_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def on_startup(app: Application):
     await init_db()
-    logger.info("Database initialized.")
+    loop = asyncio.get_event_loop()
+    await loop.run_in_executor(None, scan_and_index)
+    logger.info("Startup complete.")
+
+
+async def on_shutdown(app: Application):
+    await http_client.aclose()
+    logger.info("HTTP client closed.")
 
 
 def build_application() -> Application:
@@ -323,6 +339,7 @@ def build_application() -> Application:
         Application.builder()
         .token(config.TELEGRAM_BOT_TOKEN)
         .post_init(on_startup)
+        .post_shutdown(on_shutdown)
         .build()
     )
 

@@ -9,3 +9,6 @@ __pycache__/
 开发日志.md
 *.db
 companion-ai/test/
+companion-ai/docs/
+companion-ai/data/chroma/
+akashic-agent-main/

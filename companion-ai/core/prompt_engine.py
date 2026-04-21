@@ -84,4 +84,14 @@ class PromptEngine:
                 parts.append(f"用户：{ex['user']}")
                 parts.append(f"{role['name']}：{ex['assistant']}")
 
+        # 7. 输出格式约束（固定，与角色无关）
+        parts.append(
+            "【输出格式要求】你的回复将直接显示在 Telegram 消息中。"
+            "必须使用简体中文回复，禁止使用繁体中文。"
+            "禁止使用 LaTeX 数学公式（$...$、$$...$$、\\frac、\\sum 等）；"
+            "用普通文字描述数学内容，例如用'x 的平方'代替'$x^2$'。"
+            "禁止使用 Markdown 表格；改用分点列表或分段描述。"
+            "可以使用 **加粗** 格式。"
+        )
+
         return "\n".join(parts)

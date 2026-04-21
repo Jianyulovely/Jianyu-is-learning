@@ -5,6 +5,7 @@ FastAPI LLM 推理服务 - Ollama 封装层
 import logging
 import sys
 import os
+from contextlib import asynccontextmanager
 from typing import Optional
 
 import httpx
@@ -22,6 +23,14 @@ logger = logging.getLogger(__name__)
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from config import config
+import core.http_client as http_client
+from core.http_client import safe_post, safe_get
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    yield
+    await http_client.aclose()
 
 
 # ── 请求 / 响应模型 ──────────────────────────────────────────────────────────
@@ -66,7 +75,7 @@ class ChatResponse(BaseModel):
 
 # ── App ──────────────────────────────────────────────────────────────────────
 
-app = FastAPI(title="Companion AI - LLM Service (Ollama)")
+app = FastAPI(title="Companion AI - LLM Service (Ollama)", lifespan=lifespan)
 
 
 # ── 路由 ─────────────────────────────────────────────────────────────────────
@@ -98,19 +107,18 @@ async def generate(req: GenerateRequest):
         payload["context"] = req.context
 
     try:
-        async with httpx.AsyncClient(timeout=120.0) as client:
-            resp = await client.post(config.OLLAMA_GEN_URL, json=payload)
-            resp.raise_for_status()
-            data = resp.json()
-            reply = data.get("response", "")
-            logger.info(f"← reply: {reply!r}")
-            logger.info(f"← context tokens: {len(data.get('context', []))}")
+        resp = await safe_post(config.OLLAMA_GEN_URL, json=payload)
+        resp.raise_for_status()
+        data = resp.json()
+        reply = data.get("response", "")
+        logger.info(f"← reply: {reply!r}")
+        logger.info(f"← context tokens: {len(data.get('context', []))}")
 
-            return GenerateResponse(
-                reply=reply,
-                context=data.get("context", []),
-                usage={"input_tokens": 0, "output_tokens": 0}
-            )
+        return GenerateResponse(
+            reply=reply,
+            context=data.get("context", []),
+            usage={"input_tokens": 0, "output_tokens": 0}
+        )
     except httpx.HTTPError as e:
         raise HTTPException(status_code=500, detail=f"Ollama request failed: {str(e)}")
     except Exception as e:
@@ -147,20 +155,19 @@ async def chat(req: ChatRequest):
         payload["tools"] = req.tools
 
     try:
-        async with httpx.AsyncClient(timeout=120.0) as client:
-            resp = await client.post(config.OLLAMA_CHAT_URL, json=payload)
-            resp.raise_for_status()
-            data = resp.json()
-            msg = data.get("message", {})
-            reply = msg.get("content", "")
-            tool_calls = msg.get("tool_calls", [])
-            logger.info(f"← reply: {reply!r}  tool_calls: {len(tool_calls)}")
+        resp = await safe_post(config.OLLAMA_CHAT_URL, json=payload)
+        resp.raise_for_status()
+        data = resp.json()
+        msg = data.get("message", {})
+        reply = msg.get("content", "")
+        tool_calls = msg.get("tool_calls", [])
+        logger.info(f"← reply: {reply!r}  tool_calls: {len(tool_calls)}")
 
-            return ChatResponse(
-                reply=reply,
-                tool_calls=tool_calls,
-                usage={"input_tokens": 0, "output_tokens": 0},
-            )
+        return ChatResponse(
+            reply=reply,
+            tool_calls=tool_calls,
+            usage={"input_tokens": 0, "output_tokens": 0},
+        )
     except httpx.HTTPError as e:
         raise HTTPException(status_code=500, detail=f"Ollama request failed: {str(e)}")
     except Exception as e:
@@ -170,10 +177,9 @@ async def chat(req: ChatRequest):
 @app.get("/health")
 async def health():
     try:
-        async with httpx.AsyncClient(timeout=5.0) as client:
-            resp = await client.get("http://localhost:11434/api/tags")
-            resp.raise_for_status()
-            return {"status": "ok", "ollama": "connected"}
+        resp = await safe_get("http://localhost:11434/api/tags", timeout=5.0)
+        resp.raise_for_status()
+        return {"status": "ok", "ollama": "connected"}
     except Exception:
         return {"status": "error", "ollama": "disconnected"}
 
