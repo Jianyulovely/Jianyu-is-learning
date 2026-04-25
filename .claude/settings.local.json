@@ -14,7 +14,10 @@
       "Bash(powershell.exe -Command \"& 'D:\\\\miniforge\\\\envs\\\\companion-ai\\\\python.exe' 'D:\\\\桌面\\\\GitHub\\\\Jianyu-is-learning\\\\companion-ai\\\\test_quick.py'\" 2>&1)",
       "Bash(powershell.exe -Command \"& 'D:\\\\miniforge\\\\envs\\\\companion-ai\\\\python.exe' 'D:\\\\桌面\\\\GitHub\\\\Jianyu-is-learning\\\\companion-ai\\\\test_p1.py'\" 2>&1)",
       "Bash(curl:*)",
-      "WebSearch"
+      "WebSearch",
+      "Bash(grep -E \"\\\\.\\(py|md\\)$\")",
+      "Bash(xargs grep *)",
+      "mcp__context7__query-docs"
     ]
   }
 }

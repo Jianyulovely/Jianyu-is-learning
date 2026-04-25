@@ -21,6 +21,12 @@ class Config:
     OLLAMA_CHAT_URL: str = os.getenv("OLLAMA_CHAT_URL", "http://localhost:11434/api/chat")
     OLLAMA_MODEL: str = os.getenv("OLLAMA_MODEL", "qwen2.5:0.5b")
 
+    # LLM 统一接入（OpenAI 兼容格式）
+    # 本地 Ollama：保持默认值即可；外部 API：修改 LLM_BASE_URL / LLM_API_KEY / LLM_MODEL
+    LLM_BASE_URL: str = os.getenv("LLM_BASE_URL", "http://localhost:11434/v1/")
+    LLM_API_KEY: str  = os.getenv("LLM_API_KEY",  "ollama")
+    LLM_MODEL: str    = os.getenv("LLM_MODEL",    os.getenv("OLLAMA_MODEL", "qwen2.5:0.5b"))
+
     # Tools
     TAVILY_API_KEY: str = os.getenv("TAVILY_API_KEY", "")
     MAX_TOOL_ROUNDS: int = int(os.getenv("MAX_TOOL_ROUNDS", "3"))

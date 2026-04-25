@@ -1,5 +1,6 @@
 python-telegram-bot[job-queue]>=20
 httpx
+openai>=1.0.0
 pyyaml
 python-dotenv
 aiosqlite
