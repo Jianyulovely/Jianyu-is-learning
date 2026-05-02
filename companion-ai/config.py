@@ -38,9 +38,8 @@ class Config:
     EMBED_MODEL: str = os.getenv("EMBED_MODEL", "bge-m3")
     CHROMA_DIR: Path = BASE_DIR / "data" / "chroma"
     DOCS_DIR: Path = BASE_DIR / "docs"
-    RAG_TOP_K: int = int(os.getenv("RAG_TOP_K", "6"))        # ChromaDB 召回候选数
+    RAG_TOP_K: int = int(os.getenv("RAG_TOP_K", "5"))        # ChromaDB 召回候选数
     RAG_EVIDENCE_TOP_N: int = int(os.getenv("RAG_EVIDENCE_TOP_N", "3"))  # 注入主模型的条数
-    RAG_SNIPPET_LEN: int = int(os.getenv("RAG_SNIPPET_LEN", "200"))      # 每条摘录最大字符数
 
     # Conversation
     MAX_HISTORY_TURNS: int = int(os.getenv("MAX_HISTORY_TURNS", "12"))

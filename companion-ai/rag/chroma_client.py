@@ -3,13 +3,12 @@ ChromaDB 客户端单例 + Ollama embedding 函数。
 embedding 使用同步 requests（供 indexer 在 executor 里调用）。
 """
 import logging
-import re
-import unicodedata
 
 import requests
 import chromadb
 from chromadb import EmbeddingFunction, Embeddings
 
+from rag.utils import _clean
 from config import config
 
 logger = logging.getLogger(__name__)
@@ -17,26 +16,14 @@ logger = logging.getLogger(__name__)
 _collection = None
 
 
-def _clean(text: str) -> str:
-    """去除 PDF 中常见的控制字符和 Unicode 私用区字符，保留可读内容。"""
-    # 去除 ASCII 控制字符（保留 \t \n）
-    text = re.sub(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]", "", text)
-    # 去除 Unicode 私用区（PDF 字体映射常用）
-    text = re.sub(r"[\ue000-\uf8ff]", "", text)
-    # NFKC 规范化（合字 ﬁ→fi 等）
-    text = unicodedata.normalize("NFKC", text)
-    return text.strip()
-
-
 class OllamaEmbeddingFunction(EmbeddingFunction):
     """调用本地 Ollama bge-m3 生成 embedding，逐条发送，过滤有问题的 chunk。"""
-
-    MAX_CHARS = 2000
 
     def __call__(self, input: list[str]) -> Embeddings:
         embeddings = []
         for text in input:
-            clean = _clean(text)[:self.MAX_CHARS]
+            clean = _clean(text)
+            # 防止清理后为空字符串
             if not clean:
                 embeddings.append([0.0] * 1024)
                 continue
@@ -48,11 +35,14 @@ class OllamaEmbeddingFunction(EmbeddingFunction):
                 )
                 resp.raise_for_status()
                 data = resp.json()
+
                 vec = data.get("embeddings", [data.get("embedding")])[0]
                 embeddings.append(vec)
+
             except Exception as e:
                 logger.warning(f"Embedding failed (len={len(clean)}): {e}")
                 embeddings.append([0.0] * 1024)
+
         return embeddings
 
 
@@ -64,6 +54,7 @@ def get_collection() -> chromadb.Collection:
         _collection = client.get_or_create_collection(
             name="papers",
             embedding_function=OllamaEmbeddingFunction(),
+            # 使用 HNSW 索引算法 + 余弦相似度进行向量检索
             metadata={"hnsw:space": "cosine"},
         )
         logger.info(f"ChromaDB collection 'papers' loaded, {_collection.count()} chunks.")

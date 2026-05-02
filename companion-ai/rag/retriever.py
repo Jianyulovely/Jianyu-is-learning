@@ -57,8 +57,7 @@ def _format_results(results: dict) -> str:
         return "[rag] No relevant content found."
 
     top_n = config.RAG_EVIDENCE_TOP_N
-    snippet_len = config.RAG_SNIPPET_LEN
-    BADGES = ["①", "②", "③", "④", "⑤"]
+    BADGES = ["①","②","③","④","⑤","⑥","⑦","⑧","⑨","⑩"]
 
     parts = []
     for i, (doc, meta, dist) in enumerate(zip(docs, metas, distances)):
@@ -67,10 +66,9 @@ def _format_results(results: dict) -> str:
         source = meta.get("source", "unknown")
         page = meta.get("page", "?")
         score = round(1 - dist, 3)   # cosine distance → similarity
-        snippet = doc[:snippet_len].rstrip()
-        if len(doc) > snippet_len:
-            snippet += "…"
+        doc = doc.rstrip()
+
         badge = BADGES[i] if i < len(BADGES) else f"[{i+1}]"
-        parts.append(f"{badge} [{source} · p.{page} · 相似度 {score}]\n{snippet}")
+        parts.append(f"{badge} [{source} · p.{page} · 相似度 {score}]\n{doc}")
 
     return "\n\n".join(parts)

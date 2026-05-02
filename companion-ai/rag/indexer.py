@@ -8,19 +8,25 @@ import hashlib
 import json
 import logging
 import re
-import unicodedata
+
 from pathlib import Path
 
 import fitz  # pymupdf
 
 from config import config
 from rag.chroma_client import get_collection
+from rag.utils import _clean
 
 logger = logging.getLogger(__name__)
 
 HASH_FILE = config.CHROMA_DIR / "indexed_files.json"
-MIN_CHUNK_LEN = 80   # 过短的块（页眉/页脚/图注）直接丢弃
 
+OVERLAP_RATIO = 0.6
+MIN_CHUNK_LEN = 50
+
+CHUNK_SIZE = 768     # 文档块大小
+OVERLAP_RATIO = 0.6   # 块重合比例
+MIN_CHUNK_LEN = 50    # 过短的块（页眉/页脚/图注）直接丢弃
 
 # ── 工具函数 ──────────────────────────────────────────────────────────────────
 
@@ -35,36 +41,72 @@ def _safe_id(text: str) -> str:
 
 def _extract_chunks(pdf_path: Path, collection_name: str) -> list[dict]:
     """用 pymupdf 提取段落级文字块，返回 chunk 列表。"""
-    chunks = []
+    
     try:
         doc = fitz.open(str(pdf_path))
     except Exception as e:
         logger.warning(f"Cannot open {pdf_path.name}: {e}")
-        return chunks
+        return []
 
+    doc_id = f"{collection_name}/{pdf_path.name}"
+
+    full_text = ""
+    offsets = []
+    # step1: 拼接+记录来源
     for page_num, page in enumerate(doc, start=1):
         blocks = page.get_text("blocks")  # (x0,y0,x1,y1,text,block_no,block_type)
         for block_idx, block in enumerate(blocks):
             if block[6] != 0:        # 跳过图片块
                 continue
             text = block[4]
-            text = re.sub(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]", "", text)
-            text = re.sub(r"[\ue000-\uf8ff]", "", text)
-            text = unicodedata.normalize("NFKC", text).strip()
+            text = _clean(text)
+            
             if len(text) < MIN_CHUNK_LEN:    # 过滤页眉/页脚/短碎片
                 continue
             if re.fullmatch(r"[\d\s\-–—]+", text):  # 跳过纯数字行（页码）
                 continue
-            chunks.append({
-                "text": text,
-                "metadata": {
-                    "source": pdf_path.name,
-                    "collection": collection_name,
-                    "page": page_num,
-                    "doc_id": f"{collection_name}/{pdf_path.name}",
-                },
+            
+            start = len(full_text)
+            full_text += text + "\n"
+            end = len(full_text)
+            
+            offsets.append({
+                "start": start,
+                "end": end,
+                "page": page_num,
+                "block_id": block_idx                
             })
     doc.close()
+
+    # step2: chunk化
+    overlap = int(CHUNK_SIZE * OVERLAP_RATIO)
+    overlap = int(CHUNK_SIZE * OVERLAP_RATIO)
+    chunks = []
+    start = 0
+    text_len = len(full_text)
+
+    while start < text_len:
+        end = start + CHUNK_SIZE
+        chunk_text = full_text[start:end]
+
+        # Step 3: 找对应 metadata
+        related = [ o for o in offsets if not (o["end"] < start or o["start"] > end) ]
+
+        pages = list(set(o["page"] for o in related))
+
+        chunks.append({
+            "text": chunk_text.strip(),
+            "metadata": {
+                "doc_id": doc_id,
+                "source": pdf_path.name,
+                "pages": pages, 
+                "num_blocks": len(related),
+                "char_len": len(chunk_text),
+            }
+        })
+
+        start = end - overlap
+
     return chunks
 
 

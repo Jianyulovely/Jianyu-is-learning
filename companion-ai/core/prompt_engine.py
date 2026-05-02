@@ -1,25 +1,19 @@
-"""
-Prompt Engine —— 动态组装 System Prompt
-结构：基础人设 + 情绪指令 + 记忆摘要（P2 填充）+ few-shot 示例
-根据 intimacy_level 注入不同强度的风格描述
-"""
-import yaml
 from pathlib import Path
+
+import yaml
 
 from core.emotion_detector import EmotionResult
 
 ROLES_DIR = Path(__file__).parent.parent / "roles" / "personas"
 
-# intimacy_level 区间 → 风格补充描述
 _INTIMACY_STYLE: list[tuple[int, str]] = [
-    (30,  "保持温和知性，偶尔关心，礼貌距离。"),
-    (60,  "可以亲昵称呼，主动关心，偶尔撒撒娇。"),
-    (80,  "情侣式互动，明显暧昧，甜蜜自然。"),
-    (101, "深度情感，亲密依赖感，情感表达更直接。"),
+    (30, "当前关系偏陌生，回复要自然、礼貌，不要过度亲密。"),
+    (60, "当前关系在逐渐熟悉，可以更温和、更有陪伴感，但仍然要克制。"),
+    (80, "当前关系比较熟悉，可以更贴心一些，适度表达关心和理解。"),
+    (101, "当前关系已经较亲近，可以自然表达在意和陪伴感，但不要失控或越界。"),
 ]
 
 
-# 从人物卡片中加载
 def _load_role(role_id: str) -> dict:
     path = ROLES_DIR / f"{role_id}.yaml"
     with open(path, "r", encoding="utf-8") as f:
@@ -27,7 +21,6 @@ def _load_role(role_id: str) -> dict:
 
 
 class PromptEngine:
-
     def __init__(self):
         self._cache: dict[str, dict] = {}
 
@@ -50,48 +43,59 @@ class PromptEngine:
         intimacy_level: int,
         image_context: str = "",
         memory_summary: str = "",
+        current_time_iso: str = "",
+        timezone_name: str = "",
     ) -> str:
         role = self._get_role(role_id)
         parts: list[str] = []
 
-        # 1. 基础人设
-        parts.append(role["base_prompt"].strip())
+        base_prompt = str(role.get("base_prompt", "")).strip()
+        if base_prompt:
+            parts.append(base_prompt)
 
-        # 2. 暧昧强度补充
-        parts.append(f"当前互动强度指引：{self._intimacy_desc(intimacy_level)}")
+        parts.append(self._intimacy_desc(intimacy_level))
 
-        # 3. 情绪指令
         if emotion.tag != "neutral":
             parts.append(
-                f"当前{user_name}看起来情绪是【{emotion.tag}】，请注意：{emotion.tone_instruction}"
+                f"{user_name} 当前情绪倾向是 {emotion.tag}。回复时请注意：{emotion.tone_instruction}"
             )
-        else:
-            parts.append(emotion.tone_instruction)
+        elif emotion.tone_instruction:
+            parts.append(str(emotion.tone_instruction))
 
-        # 4. 当前图片上下文（本条消息携带的图片，静默描述结果）
+        if current_time_iso:
+            if timezone_name:
+                parts.append(
+                    f"当前时间是 {current_time_iso}，时区是 {timezone_name}。请正确理解今天、明天、下周等相对时间。"
+                )
+            else:
+                parts.append(
+                    f"当前时间是 {current_time_iso}。请正确理解今天、明天、下周等相对时间。"
+                )
+
         if image_context:
-            parts.append(f"用户刚发来一张图片，内容是：{image_context}")
+            parts.append(f"用户最近发送过一张图片，内容描述是：{image_context}")
 
-        # 5. 长期记忆（P2 注入，P1 阶段留空占位）
         if memory_summary:
-            parts.append(f"关于{user_name}你记得：{memory_summary}")
+            parts.append(f"关于 {user_name}，你记得这些长期信息：\n{memory_summary}")
 
-        # 6. few-shot 示例
-        few_shot = role.get("few_shot", [])
+        few_shot = role.get("few_shot", []) or []
         if few_shot:
-            parts.append("以下是一些对话示例：")
+            parts.append("下面是角色语气示例，请参考语气，不要机械复读：")
+            role_name = str(role.get("name", role_id))
             for ex in few_shot:
-                parts.append(f"用户：{ex['user']}")
-                parts.append(f"{role['name']}：{ex['assistant']}")
+                user_example = str(ex.get("user", "")).strip()
+                assistant_example = str(ex.get("assistant", "")).strip()
+                if user_example:
+                    parts.append(f"用户：{user_example}")
+                if assistant_example:
+                    parts.append(f"{role_name}：{assistant_example}")
 
-        # 7. 输出格式约束（固定，与角色无关）
         parts.append(
-            "【输出格式要求】你的回复将直接显示在 Telegram 消息中。"
-            "必须使用简体中文回复，禁止使用繁体中文。"
-            "禁止使用 LaTeX 数学公式（$...$、$$...$$、\\frac、\\sum 等）；"
-            "用普通文字描述数学内容，例如用'x 的平方'代替'$x^2$'。"
-            "禁止使用 Markdown 表格；改用分点列表或分段描述。"
-            "可以使用 **加粗** 格式。"
+            "请保持自然、连贯、口语化的中文表达。"
+            "适合 Telegram 聊天场景。"
+            "不要输出系统设定说明。"
+            "如果包含公式，使用标准 LaTeX 形式。"
+            "可以使用 Markdown 加粗重点，但不要滥用。"
         )
 
-        return "\n".join(parts)
+        return "\n".join(part for part in parts if part)

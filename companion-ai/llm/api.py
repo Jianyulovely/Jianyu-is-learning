@@ -194,6 +194,7 @@ async def chat(req: ChatRequest):
             usage={"total_tokens": resp.usage.total_tokens if resp.usage else 0},
         )
     except Exception as e:
+        logger.exception("Chat request failed")
         raise HTTPException(status_code=500, detail=str(e))
 
 
