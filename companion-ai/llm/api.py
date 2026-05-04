@@ -149,10 +149,11 @@ async def chat(req: ChatRequest):
     messages = [{"role": "system", "content": req.system_prompt}]
     for i, m in enumerate(req.messages):
         is_last_user = (i == len(req.messages) - 1 and m.role == "user")
+        # 用户本次消息同时有图片和文字
         if req.images and is_last_user:
             # OpenAI vision 格式，Ollama /v1 同样支持
             messages.append({
-                "role": m.role,
+                "role": m.role,  
                 "content": [
                     {"type": "text", "text": m.content},
                     *[{"type": "image_url",

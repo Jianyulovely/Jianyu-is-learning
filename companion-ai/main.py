@@ -16,11 +16,14 @@ logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
 )
+logging.getLogger("httpx").setLevel(logging.WARNING)                                                                                                        
+
+
 logger = logging.getLogger(__name__)
 
 
 def main():
-    logger.info("Starting Companion AI Bot (P0 MVP)...")
+    logger.info("Starting Companion AI Bot ...")
     app = build_application()
     logger.info("Bot polling started.")
     app.run_polling(drop_pending_updates=True)

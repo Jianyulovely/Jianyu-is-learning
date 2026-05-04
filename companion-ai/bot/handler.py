@@ -21,6 +21,7 @@ import core.http_client as http_client
 from core.http_client import safe_post
 from core.memory_service import MemoryService
 from core.prompt_engine import PromptEngine
+from core.image_describer import describe_image
 from core.session_manager import SessionManager
 from core.tools import execute_tool, select_tools
 from db.models import init_db
@@ -41,22 +42,6 @@ def _load_role(role_id: str) -> dict:
     path = config.ROLES_DIR / f"{role_id}.yaml"
     with open(path, "r", encoding="utf-8") as f:
         return yaml.safe_load(f)
-
-
-async def _describe_image(image_b64: str) -> str:
-    payload = {
-        "system_prompt": "请用简洁中文描述这张图片里最重要的内容，重点关注人物、场景、动作和明显文字。",
-        "user_message": "请描述这张图片。",
-        "images": [image_b64],
-        "context": [],
-        "max_new_tokens": 80,
-        "temperature": 0.3,
-        "top_p": 0.9,
-        "repetition_penalty": 1.1,
-    }
-    resp = await safe_post(f"{config.LLM_API_URL}/generate", json=payload, timeout=60.0)
-    resp.raise_for_status()
-    return (resp.json().get("reply") or "").strip()
 
 
 async def _execute_selected_tools(tools: list[dict], user_message: str) -> str:
@@ -314,10 +299,16 @@ async def on_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def _save_image_desc_async(user_id: int, image_b64: str):
     try:
-        desc = await _describe_image(image_b64)
+        desc = await describe_image(image_b64)
         if desc:
-            await _session.set_last_image_desc(user_id, desc)
-            logger.info("[%s] image desc saved: %s", user_id, desc)
+            desc_text = f"""
+场景：{desc.scene}
+物体：{", ".join(desc.objects)}
+文字：{", ".join(desc.text_ocr)}
+用户相关信息：{", ".join(desc.user_relevant_fact)}""".strip()
+
+            await _session.set_last_image_desc(user_id, desc_text)
+            logger.info("[%s] image desc saved: %s", user_id, desc_text)
     except Exception as exc:
         logger.error("[%s] async image desc failed: %s", user_id, exc)
 
@@ -326,13 +317,16 @@ async def on_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
 
     photo = update.message.photo[-1]
+    # 下载图片并转为base64
     file = await context.bot.get_file(photo.file_id)
     image_bytes = await file.download_as_bytearray()
     image_b64 = base64.b64encode(image_bytes).decode("utf-8")
-
+    # 和图片一起输入的文本
     user_message = (update.message.caption or "").strip() or "请看看这张图片。"
 
+    # 用户的多模态信息输入
     await _handle_message(update, context, user_message=user_message, images=[image_b64])
+    # 提取图片摘要内容任务
     asyncio.create_task(_save_image_desc_async(user_id, image_b64))
 
 
