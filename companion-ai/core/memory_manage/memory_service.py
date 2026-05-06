@@ -4,30 +4,16 @@ import re
 from datetime import datetime
 from typing import Any
 from zoneinfo import ZoneInfo
-from enum import Enum
-from pydantic import BaseModel
 
 import aiosqlite
 
 from config import config
+from core.memory_manage.memory_model import MemoryExtractionResult
 from core.http_client import safe_post
 from db.models import DB_PATH
 
 logger = logging.getLogger(__name__)
 
-class MemoryType(str, Enum):
-    PROFILE = "profile"             # 用户稳定的背景资料
-    PREFERENCE = "preference"       # 用户偏好习惯
-    ONGOING = "ongoing"             # 持续一段时间的目标、计划、困扰、关系状态
-    EVENT = "event"                 # 近期对后续对话可能重要的事件
-
-
-class Memory(BaseModel):
-    memory_type: MemoryType
-    content: str
-    key_words: list[str]
-    confidience: float
-    happened_at: datetime
 
 _ALLOWED_MEMORY_TYPES = {"profile", "preference", "ongoing", "event"}
 _TYPE_BONUS = {
@@ -191,7 +177,7 @@ class MemoryService:
             current_time_iso=current_time_iso,
             timezone_name=timezone_name,
         )
-        raw = await self._call_json_llm(prompt)
+        raw = await self._call_llm(prompt)
         data = self._safe_parse_json(raw)
         memories = data.get("memories", []) if isinstance(data, dict) else []
         return self._filter_candidates(memories, timezone_name=timezone_name)
@@ -255,11 +241,11 @@ class MemoryService:
             "请抽取应该进入长期记忆的用户信息。"
         )
 
-    async def _call_json_llm(self, prompt: str) -> str:
+    async def _call_llm(self, prompt: str) -> str:
         payload = {
             "system_prompt": _EXTRACTION_SYSTEM_PROMPT,
             "messages": [{"role": "user", "content": prompt}],
-            "response_format": Memory.model_json_schema(),
+            "response_format": MemoryExtractionResult.model_json_schema(),
             "temperature": 0.2,
             "top_p": 0.9,
         }

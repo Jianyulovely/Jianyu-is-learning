@@ -2,7 +2,8 @@ from pathlib import Path
 
 import yaml
 
-from core.emotion_detector import EmotionResult
+from core.models import SystemPromptContext
+
 
 ROLES_DIR = Path(__file__).parent.parent / "roles" / "personas"
 
@@ -35,17 +36,17 @@ class PromptEngine:
                 return desc
         return _INTIMACY_STYLE[-1][1]
 
-    def build_system_prompt(
-        self,
-        role_id: str,
-        user_name: str,
-        emotion: EmotionResult,
-        intimacy_level: int,
-        image_context: str = "",
-        memory_summary: str = "",
-        current_time_iso: str = "",
-        timezone_name: str = "",
-    ) -> str:
+    def build_system_prompt(self, context: SystemPromptContext) -> str:
+        
+        role_id = context.role_id
+        user_name = context.user_name
+        emotion = context.emotion
+        intimacy_level = context.intimacy_level
+        current_time_iso = context.current_time_iso
+        timezone_name = context.timezone_name
+        image_context = context.image_context
+        memory_summary = context.memory_summary
+        
         role = self._get_role(role_id)
         parts: list[str] = []
 
@@ -55,7 +56,7 @@ class PromptEngine:
 
         parts.append(self._intimacy_desc(intimacy_level))
 
-        if emotion.tag != "neutral":
+        if context.emotion.tag != "neutral":
             parts.append(
                 f"{user_name} 当前情绪倾向是 {emotion.tag}。回复时请注意：{emotion.tone_instruction}"
             )
@@ -78,6 +79,8 @@ class PromptEngine:
         if memory_summary:
             parts.append(f"关于 {user_name}，你记得这些长期信息：\n{memory_summary}")
 
+        # 先不要few_shot，感觉作用不大还占token...
+        """
         few_shot = role.get("few_shot", []) or []
         if few_shot:
             parts.append("下面是角色语气示例，请参考语气，不要机械复读：")
@@ -89,6 +92,7 @@ class PromptEngine:
                     parts.append(f"用户：{user_example}")
                 if assistant_example:
                     parts.append(f"{role_name}：{assistant_example}")
+        """
 
         parts.append(
             "请保持自然、连贯、口语化的中文表达。"

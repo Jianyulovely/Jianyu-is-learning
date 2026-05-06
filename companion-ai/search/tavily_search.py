@@ -4,7 +4,7 @@ from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 from pydantic import BaseModel
 
 from config import config
-from search.expand_query import expand_queries, QueryExpandResult
+from search.expand_query import expand_queries
 from core.http_client import safe_post
 
 logger = logging.getLogger(__name__)

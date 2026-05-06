@@ -2,7 +2,7 @@
 Emotion Detector —— 基于关键词匹配的情绪识别
 返回情绪标签和对应的语气调整指令
 """
-from dataclasses import dataclass
+from core.models import EmotionResult
 
 _RULES: list[tuple[str, list[str]]] = [
     ("happy",    ["哈哈", "开心", "太棒", "耶", "好棒", "高兴", "嘿嘿", "哈哈哈", "棒棒", "开森", "爽"]),
@@ -20,15 +20,15 @@ _TONE_MAP: dict[str, str] = {
 }
 
 
-@dataclass
-class EmotionResult:
-    tag: str
-    tone_instruction: str
-
-
 def detect(text: str) -> EmotionResult:
     for tag, keywords in _RULES:
         for kw in keywords:
             if kw in text:
-                return EmotionResult(tag=tag, tone_instruction=_TONE_MAP[tag])
-    return EmotionResult(tag="neutral", tone_instruction=_TONE_MAP["neutral"])
+                return EmotionResult(
+                        tag=tag,
+                        tone_instruction=_TONE_MAP[tag]
+                    )
+    return EmotionResult(
+        tag="neutral", 
+        tone_instruction=_TONE_MAP["neutral"]
+    )

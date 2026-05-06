@@ -15,15 +15,19 @@ from telegram.ext import (
 )
 
 from config import config
+
 from core.emotion_detector import detect as detect_emotion
 from core.formatter import format_reply
 import core.http_client as http_client
 from core.http_client import safe_post
-from core.memory_service import MemoryService
+from core.memory_manage.memory_service import MemoryService
+from core.models import SystemPromptContext
 from core.prompt_engine import PromptEngine
 from core.image_describer import describe_image
 from core.session_manager import SessionManager
 from core.tools import execute_tool, select_tools
+
+from bot.models import RequestPayload
 from db.models import init_db
 from rag.indexer import scan_and_index
 
@@ -62,14 +66,17 @@ async def _execute_selected_tools(tools: list[dict], user_message: str) -> str:
     return context
 
 
-async def _call_llm(
-    system_prompt: str,
-    messages: list[dict],
-    images: list[str] | None = None,
-    tool_context: str = "",
-) -> str:
+async def _call_llm(payload: RequestPayload) -> str:
+
+    system_prompt = payload.system_prompt
+    messages = payload.history_messages
+    images = payload.images
+    tool_context = payload.tool_context
+    temperature = payload.temperature
+    top_p = payload.top_p
+
+    # 避免修改原列表
     effective_messages = list(messages)
-    images = images or []
 
     if tool_context:
         system_prompt = (
@@ -85,14 +92,14 @@ async def _call_llm(
         else:
             effective_messages.append({"role": "user", "content": f"[工具上下文]\n{tool_context}"})
 
-    payload = {
+    request_body = {
         "system_prompt": system_prompt,
         "messages": effective_messages,
         "images": images,
-        "temperature": 0.85,
-        "top_p": 0.9,
+        "temperature": temperature,
+        "top_p": top_p,
     }
-    resp = await safe_post(f"{config.LLM_API_URL}/chat", json=payload)
+    resp = await safe_post(f"{config.LLM_API_URL}/chat", json=request_body)
     if resp.status_code >= 400:
         logger.error("LLM /chat failed: %s %s", resp.status_code, resp.text)
     resp.raise_for_status()
@@ -227,7 +234,7 @@ async def _handle_message(
         timezone_name=timezone_name,
     )
 
-    system_prompt = _prompt_engine.build_system_prompt(
+    prompt_context = SystemPromptContext(
         role_id=role_id,
         user_name=user_name,
         emotion=emotion,
@@ -237,6 +244,7 @@ async def _handle_message(
         current_time_iso=current_time_iso,
         timezone_name=timezone_name,
     )
+    system_prompt = _prompt_engine.build_system_prompt(prompt_context)
 
     tools_schemas, history = await asyncio.gather(
         select_tools(user_message),
@@ -246,10 +254,12 @@ async def _handle_message(
 
     try:
         reply = await _call_llm(
-            system_prompt=system_prompt,
-            messages=history,
-            images=images,
-            tool_context=tool_context,
+            RequestPayload(
+                system_prompt = system_prompt,
+                history_messages = history,
+                images = images,
+                tool_context=tool_context,
+            )
         )
         reply = _post_process(reply, role)
         reply = format_reply(reply)
