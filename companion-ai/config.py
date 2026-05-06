@@ -29,9 +29,11 @@ class Config:
 
     # Tools
     TAVILY_API_KEY: str = os.getenv("TAVILY_API_KEY", "")
+    TAVILY_URL = "https://api.tavily.com/search"
     MAX_TOOL_ROUNDS: int = int(os.getenv("MAX_TOOL_ROUNDS", "3"))
     TOOL_SELECT_MODEL: str = os.getenv("TOOL_SELECT_MODEL", "qwen2.5:0.5b")
     TOOL_SELECT_TIMEOUT: float = float(os.getenv("TOOL_SELECT_TIMEOUT", "8.0"))
+    QUERY_EXPAND_MODEL: str = os.getenv("QUERY_EXPAND_MODEL", "qwen2.5:0.5b")
 
     # RAG
     OLLAMA_EMBED_URL: str = os.getenv("OLLAMA_EMBED_URL", "http://localhost:11434/api/embed")
