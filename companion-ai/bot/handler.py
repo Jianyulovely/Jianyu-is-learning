@@ -20,14 +20,14 @@ from core.emotion_detector import detect as detect_emotion
 from core.formatter import format_reply
 import core.http_client as http_client
 from core.http_client import safe_post
-from core.memory_manage.memory_service import MemoryService
+from core.memory_manage.memory_service import MemoryService, MemoryQueryContext
 from core.models import SystemPromptContext
 from core.prompt_engine import PromptEngine
 from core.image_describer import describe_image
 from core.session_manager import SessionManager
 from core.tools import execute_tool, select_tools
 
-from bot.models import RequestPayload
+from bot.models import RequestPayload, ChatTurnContext
 from db.models import init_db
 from rag.indexer import scan_and_index
 
@@ -228,10 +228,12 @@ async def _handle_message(
         prompt_image_context = await _session.get_last_image_desc(user_id)
 
     memory_summary = await _memory_service.build_memory_summary(
-        user_id=user_id,
-        current_message=user_message,
-        current_time_iso=current_time_iso,
-        timezone_name=timezone_name,
+        MemoryQueryContext(
+            user_id=user_id,
+            query=user_message,
+            current_time_iso=current_time_iso,
+            timezone_name=timezone_name,
+        )
     )
 
     prompt_context = SystemPromptContext(
@@ -277,16 +279,16 @@ async def _handle_message(
     await _session.bump_intimacy(user_id, emotion.tag)
     await _session.update_state(user_id, emotion_tag=emotion.tag)
 
-    asyncio.create_task(
-        _memory_service.after_turn(
-            user_id=user_id,
-            user_message=user_message,
-            assistant_reply=reply,
-            image_context="",
-            current_time_iso=current_time_iso,
-            timezone_name=timezone_name,
-        )
+    # 一轮对话结束后，进行长期记忆分析
+    chat_turn = ChatTurnContext(
+        user_id=user_id,
+        user_message=user_message,
+        assistant_reply=reply,
+        image_context=prompt_image_context,
+        current_time_iso=current_time_iso,
+        timezone_name=timezone_name,
     )
+    asyncio.create_task(_memory_service.after_turn(chat_turn))
 
     for attempt in range(3):
         try:

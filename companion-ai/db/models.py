@@ -41,7 +41,6 @@ CREATE TABLE IF NOT EXISTS long_term_memories (
     content         TEXT    NOT NULL,
     keywords_json   TEXT    NOT NULL DEFAULT '[]',
     confidence      REAL    NOT NULL DEFAULT 0.8,
-    source          TEXT    NOT NULL DEFAULT 'chat',
     status          TEXT    NOT NULL DEFAULT 'active',
     happened_at     REAL,
     created_at      REAL    NOT NULL DEFAULT (unixepoch()),

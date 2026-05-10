@@ -8,7 +8,8 @@ from zoneinfo import ZoneInfo
 import aiosqlite
 
 from config import config
-from core.memory_manage.memory_model import MemoryExtractionResult
+from core.memory_manage.memory_model import *
+from bot.models import ChatTurnContext
 from core.http_client import safe_post
 from db.models import DB_PATH
 
@@ -22,28 +23,7 @@ _TYPE_BONUS = {
     "profile": 1.5,
     "event": 1.0,
 }
-_STOPWORDS = {
-    "用户",
-    "自己",
-    "我们",
-    "你们",
-    "他们",
-    "这个",
-    "那个",
-    "今天",
-    "明天",
-    "昨天",
-    "最近",
-    "现在",
-    "刚刚",
-    "一下",
-    "已经",
-    "还有",
-    "就是",
-    "真的",
-    "感觉",
-    "觉得",
-}
+
 _EXTRACTION_SYSTEM_PROMPT = """
 你是 companion-ai 的长期记忆抽取器。
 
@@ -70,6 +50,12 @@ _EXTRACTION_SYSTEM_PROMPT = """
 - 如果时间无法可靠确定，happened_at 置为空字符串。
 - 不要把时间戳硬塞进 content，除非时间本身就是关键事实的一部分。
 
+置信度评分：
+- 0.9-1.0: 用户明确陈述的事实、偏好或已确认的计划
+- 0.75-0.89: 根据用户陈述的合理推断，比较确定的信息
+- 0.65-0.74: 根据用户陈述的合理猜测，有一定依据但不完全确定
+- below 0.65: 不确定、猜测性很大的推断或及其模糊的表述，不建议保存
+
 输出要求：
 - 只能输出 JSON
 - 如果没有应保存的内容，输出 {"memories":[]}
@@ -90,35 +76,18 @@ _EXTRACTION_SYSTEM_PROMPT = """
 
 
 class MemoryService:
-    async def build_memory_summary(
-        self,
-        user_id: int,
-        current_message: str,
-        limit: int = 6,
-        current_time_iso: str = "",
-        timezone_name: str = "Asia/Shanghai",
-    ) -> str:
-        rows = await self.search_memories(
-            user_id=user_id,
-            query=current_message,
-            limit=limit,
-            current_time_iso=current_time_iso,
-            timezone_name=timezone_name,
-        )
+    async def build_memory_summary(self, memory_query: MemoryQueryContext) -> str:
+        rows = await self.search_memories(memory_query)
         if not rows:
             return ""
-        return self._format_summary(rows[:limit])
+        return self._format_summary(rows[:memory_query.limit])
 
-    async def search_memories(
-        self,
-        user_id: int,
-        query: str,
-        limit: int = 8,
-        current_time_iso: str = "",
-        timezone_name: str = "Asia/Shanghai",
-    ) -> list[dict]:
-        keywords = self._split_keywords(query)
-        now_ts = self._current_timestamp(current_time_iso, timezone_name)
+    async def search_memories(self, memory_query: MemoryQueryContext) -> list[dict]:
+        keywords = self._split_keywords(memory_query.query)
+        now_ts = self._current_timestamp(
+            memory_query.current_time_iso,
+            memory_query.timezone_name
+        )
         rows: list[dict] = []
 
         try:
@@ -133,7 +102,7 @@ class MemoryService:
                     ORDER BY updated_at DESC
                     LIMIT 200
                     """,
-                    (user_id,),
+                    (memory_query.user_id,),
                 ) as cur:
                     raw_rows = await cur.fetchall()
         except Exception as exc:
@@ -151,7 +120,7 @@ class MemoryService:
         matched = [row for row in rows if row["overlap"] > 0]
         if matched:
             matched.sort(key=lambda row: (row["score"], row["updated_at"]), reverse=True)
-            return matched[:limit]
+            return matched[:memory_query.limit]
 
         fallback = [
             row for row in rows
@@ -159,30 +128,23 @@ class MemoryService:
             and float(row.get("confidence") or 0.0) >= 0.75
         ]
         fallback.sort(key=lambda row: (row["score"], row["updated_at"]), reverse=True)
-        return fallback[: min(limit, 3)]
+        return fallback[: min(memory_query.limit, 3)]
 
-    async def extract_candidate_memories(
-        self,
-        user_id: int,
-        user_message: str,
-        assistant_reply: str,
-        image_context: str = "",
-        current_time_iso: str = "",
-        timezone_name: str = "Asia/Shanghai",
-    ) -> list[dict]:
-        prompt = self._build_extraction_prompt(
-            user_message=user_message,
-            assistant_reply=assistant_reply,
-            image_context=image_context,
-            current_time_iso=current_time_iso,
-            timezone_name=timezone_name,
-        )
-        raw = await self._call_llm(prompt)
-        data = self._safe_parse_json(raw)
-        memories = data.get("memories", []) if isinstance(data, dict) else []
-        return self._filter_candidates(memories, timezone_name=timezone_name)
+    async def extract_memories(self, chat_turn: ChatTurnContext) -> MemoryList:
+        """根据 用户输入内容 提取有关其的 事实性内容 作为长期记忆"""
+        image_block = chat_turn.image_context or "无"
 
-    async def save_memories(self, user_id: int, memories: list[dict]) -> None:
+        extract_prompt = (                                                                                                                                                                  
+            f"当前时间：\n{chat_turn.current_time_iso or '未知'}\n\n"                                                                                                                       
+            f"时区：\n{chat_turn.timezone_name}\n\n"                                                                                                                                        
+            f"用户输入：\n{chat_turn.user_message}\n\n"                                                                                                                                     
+            f"图片上下文：\n{image_block}\n\n"                                                                                                                                              
+            "请只从用户输入和图片上下文中抽取长期记忆。"                                                                                                                                    
+        )      
+        memories = await self._call_llm(extract_prompt)
+        return self._filter_candidates(memories)
+
+    async def save_memories(self, user_id: int, memories: MemoryList) -> None:
         if not memories:
             return
 
@@ -200,125 +162,84 @@ class MemoryService:
         except Exception as exc:
             logger.warning("save_memories failed: %s", exc)
 
-    async def after_turn(
-        self,
-        user_id: int,
-        user_message: str,
-        assistant_reply: str,
-        image_context: str = "",
-        current_time_iso: str = "",
-        timezone_name: str = "Asia/Shanghai",
-    ) -> None:
+    async def after_turn(self, chat_turn: ChatTurnContext) -> None:
+        """一轮对话结束后，根据用户输入提取长期记忆"""
         try:
-            memories = await self.extract_candidate_memories(
-                user_id=user_id,
-                user_message=user_message,
-                assistant_reply=assistant_reply,
-                image_context=image_context,
-                current_time_iso=current_time_iso,
-                timezone_name=timezone_name,
-            )
+            memories = await self.extract_memories(chat_turn)
             if memories:
-                await self.save_memories(user_id=user_id, memories=memories)
+                await self.save_memories(user_id=chat_turn.user_id, memories=memories)
         except Exception as exc:
             logger.warning("after_turn failed: %s", exc)
 
-    def _build_extraction_prompt(
-        self,
-        user_message: str,
-        assistant_reply: str,
-        image_context: str,
-        current_time_iso: str,
-        timezone_name: str,
-    ) -> str:
-        image_block = image_context or "无"
-        return (
-            f"当前请求时间：\n{current_time_iso or '未知'}\n\n"
-            f"时区：\n{timezone_name}\n\n"
-            f"用户输入：\n{user_message}\n\n"
-            f"助手回复：\n{assistant_reply}\n\n"
-            f"图片上下文：\n{image_block}\n\n"
-            "请抽取应该进入长期记忆的用户信息。"
+    async def _call_llm(self, prompt: str) -> MemoryCandidateResult:
+        payload = RequestPayload(
+            system_prompt = _EXTRACTION_SYSTEM_PROMPT,
+            user_content =  [{"role": "user", "content": prompt}],
+            response_format =  MemoryCandidateResult.model_json_schema(),
+            temperature =  0.2,
+            top_p =  0.9,
         )
-
-    async def _call_llm(self, prompt: str) -> str:
-        payload = {
-            "system_prompt": _EXTRACTION_SYSTEM_PROMPT,
-            "messages": [{"role": "user", "content": prompt}],
-            "response_format": MemoryExtractionResult.model_json_schema(),
-            "temperature": 0.2,
-            "top_p": 0.9,
-        }
         resp = await safe_post(f"{config.LLM_API_URL}/chat", json=payload, timeout=60.0)
         resp.raise_for_status()
-        return (resp.json().get("reply") or "").strip()
 
-    def _safe_parse_json(self, raw: str) -> dict[str, Any]:
+        raw_memories = (resp.json().get("reply") or "").strip()
+        memories = self._parse_extraction_result(raw_memories)
+        return memories
+
+    def _parse_extraction_result(self, raw: str) -> MemoryCandidateResult:
+        """对话记忆抽取部分 模型返回内容解析函数"""
         if not raw:
-            return {}
+            return MemoryCandidateResult()
         try:
-            return json.loads(raw)
+            data = json.loads(raw)
         except json.JSONDecodeError:
+            # 从原始返回结果中找出json的标志性的前后大括号
+            # 其中的内容就是正确的返回结果
             match = re.search(r"\{.*\}", raw, re.S)
             if not match:
-                logger.warning("memory extractor returned non-json: %r", raw[:300])
-                return {}
+                logger.warning("memory extractor returned non-json: %r", raw[:100])
+                return MemoryCandidateResult()
             try:
-                return json.loads(match.group(0))
+                data = json.loads(match.group(0))
             except json.JSONDecodeError:
-                logger.warning("memory extractor json parse failed: %r", raw[:300])
-                return {}
+                logger.warning("memory extractor json parse failed: %r", raw[:100])
+                return MemoryCandidateResult()
+        
+        try:
+            return MemoryCandidateResult.model_validate(data)
+        
+        except Exception as exc:
+            logger.warning("memory extractor schema validation failed: %s", exc)
+            return MemoryCandidateResult()
 
-    def _filter_candidates(self, memories: list[dict], timezone_name: str) -> list[dict]:
+    def _filter_candidates(self, candidate_memories: MemoryCandidateResult) -> MemoryList:
+        """保留有效类型记忆 同时 去除低置信度(<0.65)记忆内容"""
         results: list[dict] = []
-        seen: set[tuple[str, str]] = set()
-        for memory in memories or []:
-            if not isinstance(memory, dict):
+        candidates = candidate_memories.candidates
+
+        for candidate in candidates:
+            memory_type = candidate.memory_type.strip().lower()
+            content = candidate.content.strip()
+            if not content:
                 continue
-            normalized = self._normalize_candidate(memory, timezone_name)
-            if not normalized:
+            confidence = candidate.confidence
+            if confidence < 0.65:
                 continue
-            key = (normalized["memory_type"], self._normalize_text(normalized["content"]))
-            if key in seen:
-                continue
-            seen.add(key)
-            results.append(normalized)
-        return results
+            keywords = candidate.keywords
+            happened_at = candidate.happened_at
+            # 仅对包含时间属性记忆类型添加时间戳
+            if memory_type in {MemoryType.PROFILE, MemoryType.PREFERENCE}:
+                happened_at = None
+            memory = Memory(
+                memory_type=memory_type,
+                content=content,
+                keywords=keywords,
+                confidence=confidence,
+                happened_at=happened_at
+            )
+            results.append(memory)
 
-    def _normalize_candidate(self, memory: dict, timezone_name: str) -> dict | None:
-        memory_type = str(memory.get("memory_type", "")).strip().lower()
-        if memory_type not in _ALLOWED_MEMORY_TYPES:
-            return None
-
-        content = str(memory.get("content", "")).strip()
-        if not content:
-            return None
-
-        confidence = self._clamp_confidence(memory.get("confidence", 0.0))
-        if confidence < 0.65:
-            return None
-
-        keywords = [
-            str(keyword).strip()
-            for keyword in (memory.get("keywords") or [])
-            if str(keyword).strip()
-        ]
-        if not keywords:
-            keywords = self._split_keywords(content)
-        keywords = keywords[:5]
-
-        happened_at = self._parse_happened_at(memory.get("happened_at", ""), timezone_name)
-        if memory_type in {"profile", "preference"}:
-            happened_at = None
-
-        return {
-            "memory_type": memory_type,
-            "content": content,
-            "keywords": keywords,
-            "confidence": confidence,
-            "happened_at": happened_at,
-            "source": "chat",
-        }
+        return MemoryList(memories=results)
 
     async def _find_similar_memory(
         self,
@@ -414,8 +335,8 @@ class MemoryService:
             """
             INSERT INTO long_term_memories (
                 user_id, memory_type, content, keywords_json, confidence,
-                source, status, happened_at, created_at, updated_at, last_seen_at
-            ) VALUES (?, ?, ?, ?, ?, ?, 'active', ?, ?, ?, ?)
+                status, happened_at, created_at, updated_at, last_seen_at
+            ) VALUES (?, ?, ?, ?, ?, 'active', ?, ?, ?, ?)
             """,
             (
                 user_id,
@@ -423,8 +344,8 @@ class MemoryService:
                 memory["content"],
                 json.dumps(memory["keywords"], ensure_ascii=False),
                 memory["confidence"],
-                memory.get("source", "chat"),
                 memory.get("happened_at"),
+                # 这三种时间这里没有进行区分，而是统一赋值，后续更改
                 now_ts,
                 now_ts,
                 now_ts,
@@ -508,16 +429,6 @@ class MemoryService:
             parts.append(f"{labels[memory_type]}：" + "；".join(unique_items[:2]))
         return "\n".join(parts)
 
-    def _split_keywords(self, text: str) -> list[str]:
-        tokens = re.findall(r"[\u4e00-\u9fff]{2,8}|[A-Za-z0-9_]{2,32}", text or "")
-        results: list[str] = []
-        for token in tokens:
-            token = token.strip().lower()
-            if not token or token in _STOPWORDS:
-                continue
-            if token not in results:
-                results.append(token)
-        return results[:8]
 
     def _decode_keywords(self, raw: str) -> list[str]:
         try:
@@ -539,40 +450,10 @@ class MemoryService:
                 merged.append(normalized)
         return merged[:8]
 
-    def _parse_happened_at(self, value: Any, timezone_name: str) -> float | None:
-        if value in (None, "", 0):
-            return None
-        if isinstance(value, (int, float)):
-            return float(value)
-        text = str(value).strip()
-        if not text:
-            return None
-        try:
-            return float(text)
-        except ValueError:
-            pass
-        if text.endswith("Z"):
-            text = text[:-1] + "+00:00"
-        try:
-            dt = datetime.fromisoformat(text)
-            if dt.tzinfo is None:
-                dt = dt.replace(tzinfo=ZoneInfo(timezone_name))
-            return dt.timestamp()
-        except ValueError:
-            return None
-
     def _current_timestamp(self, current_time_iso: str, timezone_name: str) -> float:
         parsed = self._parse_happened_at(current_time_iso, timezone_name)
         if parsed is not None:
             return parsed
         return datetime.now(ZoneInfo(timezone_name)).timestamp()
 
-    def _clamp_confidence(self, value: Any) -> float:
-        try:
-            confidence = float(value)
-        except (TypeError, ValueError):
-            confidence = 0.0
-        return max(0.0, min(confidence, 1.0))
 
-    def _normalize_text(self, text: str) -> str:
-        return re.sub(r"\s+", " ", (text or "").strip().lower())

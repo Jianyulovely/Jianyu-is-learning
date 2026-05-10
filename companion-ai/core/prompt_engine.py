@@ -37,6 +37,7 @@ class PromptEngine:
         return _INTIMACY_STYLE[-1][1]
 
     def build_system_prompt(self, context: SystemPromptContext) -> str:
+        """对话系统提示词内容"""
         
         role_id = context.role_id
         user_name = context.user_name
@@ -78,21 +79,6 @@ class PromptEngine:
 
         if memory_summary:
             parts.append(f"关于 {user_name}，你记得这些长期信息：\n{memory_summary}")
-
-        # 先不要few_shot，感觉作用不大还占token...
-        """
-        few_shot = role.get("few_shot", []) or []
-        if few_shot:
-            parts.append("下面是角色语气示例，请参考语气，不要机械复读：")
-            role_name = str(role.get("name", role_id))
-            for ex in few_shot:
-                user_example = str(ex.get("user", "")).strip()
-                assistant_example = str(ex.get("assistant", "")).strip()
-                if user_example:
-                    parts.append(f"用户：{user_example}")
-                if assistant_example:
-                    parts.append(f"{role_name}：{assistant_example}")
-        """
 
         parts.append(
             "请保持自然、连贯、口语化的中文表达。"
