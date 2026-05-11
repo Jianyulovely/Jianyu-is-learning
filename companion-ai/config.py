@@ -50,5 +50,8 @@ class Config:
     DEFAULT_ROLE: str = os.getenv("DEFAULT_ROLE", "jiejie")
     ROLES_DIR: Path = BASE_DIR / "roles" / "personas"
 
+    # 用户所在时区
+    USER_TIMEZONE: str = "Asia/Shanghai"
+
 
 config = Config()

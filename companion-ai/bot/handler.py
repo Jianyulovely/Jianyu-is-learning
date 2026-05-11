@@ -206,7 +206,7 @@ async def _handle_message(
     user = update.effective_user
     user_id = user.id
     images = images or []
-    timezone_name = "Asia/Shanghai"
+    timezone_name = config.USER_TIMEZONE
     current_time_iso = datetime.now(ZoneInfo(timezone_name)).isoformat()
 
     await context.bot.send_chat_action(chat_id=update.effective_chat.id, action="typing")

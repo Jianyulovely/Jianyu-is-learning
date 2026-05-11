@@ -1,6 +1,4 @@
-import keyword
 from pydantic import BaseModel, Field, field_validator, model_validator 
-import re
 from datetime import datetime
 from enum import Enum
 
@@ -24,29 +22,21 @@ class MemoryQueryContext(BaseModel):
 
 
 class MemoryType(str, Enum):
+    """四种记忆类型"""
     PROFILE = "profile"             # 用户稳定的背景资料
     PREFERENCE = "preference"       # 用户偏好习惯
     ONGOING = "ongoing"             # 持续一段时间的目标、计划、困扰、关系状态
     EVENT = "event"                 # 近期对后续对话可能重要的事件
 
 
-class MemoryCandidate(BaseModel):
-    """llm提取出的候选记忆"""
+class MemoryBase(BaseModel):
+    """记忆类型基类"""
     memory_type: MemoryType
     content: str = ""
     keywords: list[str] = Field(default_factory=list)
     confidence: float = 0.0
-    # 给 LLM 用显式ISO时间
-    happened_at: datetime | None = None
 
-    @model_validator(mode="after")
-    def clean_keywords(self):
-        """清洗关键词内容"""
-        keywords = [str(keyword).strip() for keyword in self.keywords if str(keyword).strip()]
-        self.keywords = keywords
-        return self
-
-    # 在 Memory 中 confidence 被赋值的时候先进行下面的操作
+    # 在 confidence 被赋值的时候先进行下面区间限制操作（0-1）
     @field_validator("confidence", mode="before")
     @classmethod
     def clamp_confidence(cls, value):
@@ -57,20 +47,39 @@ class MemoryCandidate(BaseModel):
             return 0.0
         return max(0.0, min(confidence, 1.0))
 
+    @model_validator(mode="after")
+    def clean_keywords(self):
+        """清洗关键词内容"""
+        keywords = [str(keyword).strip() for keyword in self.keywords if str(keyword).strip()]
+        self.keywords = keywords
+        return self
+    
+
+class MemoryCandidate(MemoryBase):
+    """llm提取出的候选记忆"""
+    # 给 LLM 用显式ISO时间
+    happened_at: datetime | None = None
+
+    # 防止由llm生成的 happened_at 是空字符串从而验证错误
+    @field_validator("happened_at", mode="before")
+    @classmethod
+    def empty_happened_at_to_none(cls, value):
+        if not value:
+            return None
+        return value
+
 class MemoryCandidateResult(BaseModel):
     """llm提取出的候选记忆列表"""
-    candidates: list[MemoryCandidate] = Field(default_factory=list)
+    memories: list[MemoryCandidate] = Field(default_factory=list)
 
-class Memory(BaseModel):
-    """用于存储的长期记忆"""
-    memory_type: MemoryType
-    content: str = ""
+class Memory(MemoryBase):
+    """用于存储的一份长期记忆"""
     keywords: list[str] = Field(default_factory=list)
-    confidence: float = 0.0
     timezone_name: str = "Asia/Shanghai"
+    # 具体年月日时间
     happened_at: datetime | None = None
     # Unix时间戳
-    happened_ts: int = 0
+    happened_ts: int | None = None
 
     @model_validator(mode="after")
     def get_timestamp(self):
@@ -83,3 +92,23 @@ class Memory(BaseModel):
 class MemoryList(BaseModel):
     """用于存储的长期记忆列表"""
     memories: list[Memory] = Field(default_factory=list)
+
+
+class ExistingMemory(BaseModel):
+    """数据库中已有记忆类型 用于记忆更新时查找"""
+    id: int
+    memory_type: MemoryType
+    content: str = ""
+    # 关键词列表存入数据库时为字符串
+    keywords_json: str = ""
+    confidence: float = 0.0
+    # Unix时间戳 
+    happened_at: int | None = None  
+
+class MemorySummary(BaseModel):
+    """根据用户 query 获取到的长期记忆内容"""
+    
+    preference: str = ""
+    profile: str = ""
+    ongoing: str = ""
+    event: str = ""

@@ -11,9 +11,11 @@ class RequestPayload(BaseModel):
     top_p: float = 0.9
 
 class ChatTurnContext(BaseModel):
+    """一轮对话内容结构"""
     user_id: int
     user_message: str
     assistant_reply: str = ""
     image_context: str = ""
+    # 对话发生时间
     current_time_iso: str = ""
     timezone_name: str = "Asia/Shanghai"
