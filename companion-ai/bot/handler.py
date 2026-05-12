@@ -206,6 +206,7 @@ async def _handle_message(
     user = update.effective_user
     user_id = user.id
     images = images or []
+    # 用户所在时区
     timezone_name = config.USER_TIMEZONE
     current_time_iso = datetime.now(ZoneInfo(timezone_name)).isoformat()
 

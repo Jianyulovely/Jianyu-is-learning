@@ -16,11 +16,15 @@ class MemoryService:
         self.memory_summarizer = MemorySummarizer()
 
     async def build_memory_summary(self, memory_query: MemoryQueryContext) -> str:
-        """给llm提供关于用户的长期记忆"""
-        rows = await self.memory_summarizer.search(memory_query)
-        if not rows:
-            return ""
-        return self._format_summary(rows[:memory_query.limit])
+        """在回复之前 给llm提供关于用户的长期记忆"""
+        summary = await self.memory_summarizer.summarize(memory_query)
+        mem_summary = (
+            f"用户偏好：{summary.preference or '暂无'}\n"
+            f"用户背景：{summary.profile or '暂无'}\n"
+            f"进行中事项：{summary.ongoing or '暂无'}\n"
+            f"重要事件：{summary.event or '暂无'}\n"
+        )
+        return mem_summary
 
 
     async def after_turn(self, chat_turn: ChatTurnContext) -> None:

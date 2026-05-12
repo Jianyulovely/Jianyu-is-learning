@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field, field_validator, model_validator 
-from datetime import datetime
+from datetime import date, datetime
 from enum import Enum
 
 
@@ -17,8 +17,19 @@ class MemoryQueryContext(BaseModel):
     user_id: int
     query: str
     limit: int = 6
+    current_time: datetime | None = None
     current_time_iso: str = ""
-    timezone_name: str = "Asia/Shanghai"
+
+    @model_validator(mode="after")
+    def parse_current_time(self):
+        """
+        根据ISO字符串生成实际时间，这里的ISO字符串代表query发起时间，一定会产生
+        这样就不用来回传timezone了
+        """
+        if self.current_time_iso:
+            self.current_time = datetime.fromisoformat(self.current_time_iso)
+
+        return self
 
 
 class MemoryType(str, Enum):
@@ -105,9 +116,23 @@ class ExistingMemory(BaseModel):
     # Unix时间戳 
     happened_at: int | None = None  
 
+
+class ActiveMemory(BaseModel):
+    """从数据库中获取的 active 长期记忆"""
+    user_id: int
+    memory_type: MemoryType
+    content: str = ""
+    happened_at_iso: str = ""
+    updated_at_iso: str = ""
+    last_seen_at_iso: str = ""
+
+class ActiveMemoryList(BaseModel):
+    """从数据库中获取的 active 长期记忆列表"""
+    memories: list[ActiveMemory] = Field(default_factory=list)
+
+
 class MemorySummary(BaseModel):
     """根据用户 query 获取到的长期记忆内容"""
-    
     preference: str = ""
     profile: str = ""
     ongoing: str = ""

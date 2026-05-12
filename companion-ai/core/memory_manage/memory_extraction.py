@@ -5,7 +5,7 @@ from config import config
 
 from core.memory_manage.memory_model import *
 from core.http_client import safe_post
-
+from core.memory_manage.utils import parse_llm_json_result
 from bot.models import ChatTurnContext
 
 logger = logging.getLogger(__name__)
@@ -88,34 +88,12 @@ class MemoryExtractor:
         resp.raise_for_status()
 
         raw_memories = (resp.json().get("reply") or "").strip()
-        memories = self._parse_extraction_result(raw_memories)
+        memories = parse_llm_json_result(
+            raw=raw_memories,
+            model_cls=MemoryCandidateResult,
+            logger=logger
+        )
         return memories
-    
-    def _parse_extraction_result(self, raw: str) -> MemoryCandidateResult:
-        """对话记忆抽取部分 模型返回内容解析函数"""
-        if not raw:
-            return MemoryCandidateResult()
-        try:
-            data = json.loads(raw)
-        except json.JSONDecodeError:
-            # 从原始返回结果中找出json的标志性的前后大括号
-            # 其中的内容就是正确的返回结果
-            match = re.search(r"\{.*\}", raw, re.S)
-            if not match:
-                logger.warning("memory extractor returned non-json: %r", raw[:100])
-                return MemoryCandidateResult()
-            try:
-                data = json.loads(match.group(0))
-            except json.JSONDecodeError:
-                logger.warning("memory extractor json parse failed: %r", raw[:100])
-                return MemoryCandidateResult()
-        
-        try:
-            return MemoryCandidateResult.model_validate(data)
-        
-        except Exception as exc:
-            logger.warning("memory extractor schema validation failed: %s", exc)
-            return MemoryCandidateResult()
 
     def _filter_candidates(self, candidate_memories: MemoryCandidateResult) -> MemoryList:
         """保留有效类型记忆 同时 去除低置信度(<0.65)记忆内容"""
