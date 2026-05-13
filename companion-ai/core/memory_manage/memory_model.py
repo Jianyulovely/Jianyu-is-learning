@@ -7,7 +7,7 @@ class RequestPayload(BaseModel):
     """记忆提取部分模型请求体"""
     system_prompt: str = ""
     user_content: list[dict]
-    response_format: list[dict]
+    response_format: dict = Field(default_factory=dict) 
     temperature: float = 0.2
     top_p: float = 0.9
 

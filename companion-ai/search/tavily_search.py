@@ -36,7 +36,7 @@ class SearchResult(BaseModel):
 
 class MergedSearchResult(BaseModel):
     answer: str = ""
-    results: List[ResultsContent] = []
+    results: list[ResultsContent] = []
 
 
 
@@ -103,7 +103,7 @@ def _dedupe_results(results_list: list[SearchResult]) -> MergedSearchResult:
     def _result_rank(result: ResultsContent) -> float:                                                                                                                                                                     
         return result.score or 0.0
 
-    merged = dict[str, ResultsContent] = {}
+    merged: dict[str, ResultsContent] = {}
     answer_parts: list[str] = []
 
     for search_result in results_list:                                                                                                                                                                                 
@@ -167,9 +167,9 @@ def _format_tavily_results(data: MergedSearchResult) -> str:
 
     for i, r in enumerate(data.results, 1):
         parts.append(
-            f"[{i}] {result.title}\n"
-            f"URL: {result.url}\n"
-            f"content: {result.content}"
+            f"[{i}] {r.title}\n"
+            f"URL: {r.url}\n"
+            f"content: {r.content}"
         )
 
     if not parts:

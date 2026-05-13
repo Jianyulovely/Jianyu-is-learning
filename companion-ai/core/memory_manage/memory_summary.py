@@ -8,8 +8,8 @@ import aiosqlite
 
 from config import config
 from core.http_client import safe_post
+from core.models import ChatRequest
 from core.memory_manage.utils import parse_llm_json_result
-from core.memory_manage.memory_model import RequestPayload
 from core.memory_manage.memory_model import MemoryQueryContext, MemorySummary, ActiveMemory, ActiveMemoryList
 from db.models import DB_PATH
 
@@ -119,15 +119,21 @@ class MemorySummarizer:
             f"当前时间：\n{memory_query.current_time_iso}\n\n"
             f"当前用户相关记忆： \n{self._format_active_memories_table(user_memories)}\n\n"
         )
-        payload = RequestPayload(
+        req_payload = ChatRequest(
             system_prompt = _SUMMARY_SYSTEM_PROMPT,
-            user_content = [{"role": "user", "content": summarize_prompt}],
-            response_format = MemorySummary.model_json_schema(),
+            messages = [{"role": "user", "content": summarize_prompt}],
+            response_format = {
+                "type": "json_schema",
+                "json_schema": {
+                    "name": "memory_summary",
+                    "schema": MemorySummary.model_json_schema()
+                }
+            },
             temperature =  0.2,
             top_p =  0.9,
-        )
+        ).model_dump()
         try:
-            resp = await safe_post(f"{config.LLM_API_URL}/chat", json=payload, timeout=60.0)
+            resp = await safe_post(f"{config.LLM_API_URL}/chat", json=req_payload, timeout=60.0)
             resp.raise_for_status()
         except Exception as exc:
             logger.warning("memory summary llm call failed: %s", exc)

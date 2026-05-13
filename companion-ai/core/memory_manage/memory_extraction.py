@@ -3,6 +3,7 @@ import logging
 import re
 from config import config
 
+from core.models import ChatRequest
 from core.memory_manage.memory_model import *
 from core.http_client import safe_post
 from core.memory_manage.utils import parse_llm_json_result
@@ -77,15 +78,25 @@ class MemoryExtractor:
         return self._filter_candidates(memories)
     
     async def _call_llm(self, prompt: str) -> MemoryCandidateResult:
-        payload = RequestPayload(
+        req_payload = ChatRequest(
             system_prompt = _EXTRACTION_SYSTEM_PROMPT,
-            user_content =  [{"role": "user", "content": prompt}],
-            response_format =  MemoryCandidateResult.model_json_schema(),
+            messages =  [{"role": "user", "content": prompt}],
+            response_format =  {
+                "type": "json_schema",
+                "json_schema": {
+                    "name": "memory_candidate_result",
+                    "schema": MemoryCandidateResult.model_json_schema()
+                }
+            },
             temperature =  0.2,
             top_p =  0.9,
-        )
-        resp = await safe_post(f"{config.LLM_API_URL}/chat", json=payload, timeout=60.0)
-        resp.raise_for_status()
+        ).model_dump()
+        try:
+            resp = await safe_post(f"{config.LLM_API_URL}/chat", json=req_payload, timeout=60.0)
+            resp.raise_for_status()
+        except Exception as exc:
+            logger.warning("memory extraction llm call failed: %s", exc)
+            return MemoryCandidateResult()
 
         raw_memories = (resp.json().get("reply") or "").strip()
         memories = parse_llm_json_result(

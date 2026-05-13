@@ -68,21 +68,71 @@ TOOL_DEFINITIONS = list(_TOOL_REGISTRY.values())
 
 # ── 小模型预选 ────────────────────────────────────────────────────────────────
 
-_SELECT_SYSTEM = (
-    "You select which tools are needed to answer a user message.\n"
-    "Available tools:\n"
-    "- web_search: current events, news, real-time info, prices, weather, anything recent\n"
-    "- search_documents: academic papers, LLM architectures, training methods, research\n"
-    "Pure conversation or personal questions need no tools.\n"
-    'Output ONLY valid JSON, e.g. {"tools": ["web_search"]} or {"tools": []}'
-)
+_SELECT_SYSTEM_PROMPT = """
+You are a tool router.
 
+Choose which tools are needed for answering the user query.
+
+Available tools:
+
+1. web_search
+Use for:
+- recent/current/latest information
+- news
+- weather
+- stock prices
+- sports results
+- current APIs/models/releases
+- websites/pages on the internet
+- anything time-sensitive
+- anything that may have changed recently
+
+Examples:
+- "latest OpenAI model"
+- "weather in Tokyo"
+- "today bitcoin price"
+- "who won the NBA game"
+- "search github repo"
+
+2. search_documents
+Use for:
+- local knowledge base
+- academic concepts
+- technical explanations
+- research papers
+- LLM theory
+- stored internal documents
+- mathematical concepts
+- programming knowledge
+- long-form reference knowledge
+
+Examples:
+- "what is transformer architecture"
+- "explain PPO"
+- "what is RAG"
+- "how does attention work"
+- "summarize the paper"
+
+Rules:
+- If the query needs BOTH local knowledge AND current information, use both tools.
+- If the query is casual conversation, output no tools.
+- Prefer search_documents for stable knowledge.
+- Prefer web_search for recent or changing information.
+
+Output ONLY valid JSON.
+
+Examples:
+{"tools":["web_search"]}
+{"tools":["search_documents"]}
+{"tools":["web_search","search_documents"]}
+{"tools":[]}
+"""
 
 async def select_tools(user_message: str) -> list[dict]:
     """小模型预选工具，出错时 fallback 到空列表（纯聊天模式）。"""
     payload = {
         "model": config.TOOL_SELECT_MODEL,
-        "system": _SELECT_SYSTEM,
+        "system": _SELECT_SYSTEM_PROMPT,
         "prompt": user_message,
         "stream": False,
         "format": "json",

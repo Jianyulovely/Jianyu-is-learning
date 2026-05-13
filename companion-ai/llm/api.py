@@ -7,23 +7,24 @@ FastAPI LLM 推理服务
 import logging
 import sys
 import os
+import time
 from contextlib import asynccontextmanager
-from typing import Optional
 
 import httpx
 import uvicorn
 from fastapi import FastAPI, HTTPException
 from openai import AsyncOpenAI
-from pydantic import BaseModel
+
+# 将 companion-ai 目录加入 path
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+from core.models import GenerateRequest, GenerateResponse, ChatRequest, ChatResponse
 
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
 )
 logger = logging.getLogger(__name__)
-
-# 将 companion-ai 目录加入 path
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from config import config
 import core.http_client as http_client
@@ -45,45 +46,6 @@ async def lifespan(app: FastAPI):
     await http_client.aclose()
     await _llm_client.close()
 
-
-# ── 请求 / 响应模型 ──────────────────────────────────────────────────────────
-
-class GenerateRequest(BaseModel):
-    system_prompt: str
-    user_message: str
-    images: list[str] = []       # base64 编码图片列表，无图传 []
-    context: list[int] = []      # Ollama 多轮上下文 token，首轮传 []
-    max_new_tokens: int = 200
-    temperature: float = 0.85
-    top_p: float = 0.9
-    repetition_penalty: float = 1.1
-
-
-class GenerateResponse(BaseModel):
-    reply: str
-    context: list[int]           # 透传给调用方，存入 Redis 供下轮使用
-    usage: dict
-
-
-class ChatMessage(BaseModel):
-    role: str
-    content: str
-    tool_calls: list[dict] = []
-
-
-class ChatRequest(BaseModel):
-    system_prompt: str
-    messages: list[ChatMessage]
-    images: list[str] = []
-    tools: list[dict] = []
-    temperature: float = 0.85
-    top_p: float = 0.9
-
-
-class ChatResponse(BaseModel):
-    reply: str
-    tool_calls: list[dict] = []
-    usage: dict
 
 
 # ── App ──────────────────────────────────────────────────────────────────────
@@ -119,14 +81,19 @@ async def generate(req: GenerateRequest):
     if req.context:
         payload["context"] = req.context
 
+    started = time.perf_counter()
     try:
         resp = await safe_post(config.OLLAMA_GEN_URL, json=payload)
+        # 模型调用耗时
+        elapsed = time.perf_counter() - started
+
         resp.raise_for_status()
         data = resp.json()
         reply = data.get("response", "")
         logger.info(f"← reply: {reply!r}")
         logger.info(f"← context tokens: {len(data.get('context', []))}")
-
+        logger.info("← /generate model call finished in %.2fs", elapsed)
+        
         return GenerateResponse(
             reply=reply,
             context=data.get("context", []),
@@ -166,7 +133,9 @@ async def chat(req: ChatRequest):
             if m.tool_calls:
                 msg["tool_calls"] = m.tool_calls
             messages.append(msg)
-
+    
+    # 调用计时
+    started = time.perf_counter()
     try:
         kwargs: dict = dict(
             model=config.LLM_MODEL,
@@ -176,8 +145,12 @@ async def chat(req: ChatRequest):
         )
         if req.tools:
             kwargs["tools"] = req.tools
+        if req.response_format:
+            kwargs["response_format"] = req.response_format
 
         resp = await _llm_client.chat.completions.create(**kwargs)
+        # 模型返回耗时
+        elapsed = time.perf_counter() - started
         choice = resp.choices[0]
         reply = choice.message.content or ""
         tool_calls = []
@@ -188,6 +161,7 @@ async def chat(req: ChatRequest):
                 for tc in choice.message.tool_calls
             ]
         logger.info(f"← reply: {reply!r}  tool_calls: {len(tool_calls)}")
+        logger.info("← /chat model call finished in %.2fs", elapsed)
 
         return ChatResponse(
             reply=reply,

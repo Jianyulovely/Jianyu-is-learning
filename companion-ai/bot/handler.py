@@ -13,6 +13,7 @@ from telegram.ext import (
     MessageHandler,
     filters,
 )
+from telegram.error import NetworkError, TimedOut
 
 from config import config
 
@@ -355,6 +356,14 @@ async def on_shutdown(app: Application):
     logger.info("HTTP client closed.")
 
 
+async def on_error(update: object, context: ContextTypes.DEFAULT_TYPE) -> None:
+    error = context.error
+    if isinstance(error, (NetworkError, TimedOut)):
+        logger.warning("Telegram network error: %s", error)
+        return
+    logger.exception("Unhandled Telegram update error", exc_info=error) 
+
+
 def build_application() -> Application:
     if not config.TELEGRAM_BOT_TOKEN:
         raise ValueError("TELEGRAM_BOT_TOKEN is not set in .env")
@@ -376,4 +385,6 @@ def build_application() -> Application:
     app.add_handler(CommandHandler("help", cmd_help))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, on_message))
     app.add_handler(MessageHandler(filters.PHOTO, on_photo))
+    
+    app.add_error_handler(on_error)
     return app
