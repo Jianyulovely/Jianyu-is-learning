@@ -54,7 +54,8 @@ async def _execute_selected_tools(tools: list[dict], user_message: str) -> str:
         return ""
 
     results = await asyncio.gather(
-        *[execute_tool(tool["function"]["name"], {"query": user_message}) for tool in tools]
+        *[execute_tool(tool["function"]["name"], {"query": user_message}) for tool in tools],
+        return_exceptions=True
     )
     parts: list[str] = []
     for tool, result in zip(tools, results):
