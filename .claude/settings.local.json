@@ -17,7 +17,14 @@
       "WebSearch",
       "Bash(grep -E \"\\\\.\\(py|md\\)$\")",
       "Bash(xargs grep *)",
-      "mcp__context7__query-docs"
+      "mcp__context7__query-docs",
+      "Bash(python -c \"import pypdf; r = pypdf.PdfReader\\('原文.pdf'\\); print\\(r.pages[0].extract_text\\(\\)[:3000]\\)\")",
+      "Bash(python -c ' *)",
+      "Bash(python update_review.py)",
+      "Bash(del *)",
+      "Bash(python fix_fonts.py)",
+      "Bash(python fix_brackets.py)",
+      "Bash(python add_author.py)"
     ]
   }
 }
