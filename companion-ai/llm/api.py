@@ -36,12 +36,13 @@ _llm_client: AsyncOpenAI | None = None
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    global _llm_client
+    global _llm_client, _llm_model
     _llm_client = AsyncOpenAI(
         base_url=config.LLM_BASE_URL,
         api_key=config.LLM_API_KEY,
         timeout=120.0,
     )
+    _llm_model = config.LLM_MODEL
     yield
     await http_client.aclose()
     await _llm_client.close()
@@ -50,7 +51,7 @@ async def lifespan(app: FastAPI):
 
 # ── App ──────────────────────────────────────────────────────────────────────
 
-app = FastAPI(title="Companion AI - LLM Service (Ollama)", lifespan=lifespan)
+app = FastAPI(title="Companion AI - LLM Service", lifespan=lifespan)
 
 
 # ── 路由 ─────────────────────────────────────────────────────────────────────
@@ -138,7 +139,7 @@ async def chat(req: ChatRequest):
     started = time.perf_counter()
     try:
         kwargs: dict = dict(
-            model=config.LLM_MODEL,
+            model=_llm_model,
             messages=messages,
             temperature=req.temperature,
             top_p=req.top_p,

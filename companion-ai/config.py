@@ -6,6 +6,12 @@ BASE_DIR = Path(__file__).parent
 load_dotenv(BASE_DIR / ".env")
 
 
+LLM_PROVIDER = os.getenv("LLM_PROVIDER", "ollama")
+def _provider_value(name: str, default: str = "") -> str:
+    """根据模型服务商获取env中对应的url 和 key"""                                                              
+    prefix = LLM_PROVIDER.upper()                                                                                                
+    return os.getenv(f"{prefix}_{name}", default)
+
 class Config:
     # Telegram
     TELEGRAM_BOT_TOKEN: str = os.getenv("TELEGRAM_BOT_TOKEN", "")
@@ -16,25 +22,17 @@ class Config:
     # LLM service
     LLM_API_URL: str = os.getenv("LLM_API_URL", "http://localhost:8000")
 
-    # Ollama
-    OLLAMA_GEN_URL: str = os.getenv("OLLAMA_GEN_URL", "http://localhost:11434/api/generate")
-    OLLAMA_CHAT_URL: str = os.getenv("OLLAMA_CHAT_URL", "http://localhost:11434/api/chat")
-    OLLAMA_MODEL: str = os.getenv("OLLAMA_MODEL", "qwen2.5:0.5b")
-
     # LLM 统一接入（OpenAI 兼容格式）
     # 本地 Ollama：保持默认值即可；外部 API：修改 LLM_BASE_URL / LLM_API_KEY / LLM_MODEL
-    LLM_BASE_URL: str = os.getenv("LLM_BASE_URL", "http://localhost:11434/v1/")
-    LLM_API_KEY: str  = os.getenv("LLM_API_KEY",  "ollama")
-    LLM_MODEL: str    = os.getenv("LLM_MODEL",    os.getenv("OLLAMA_MODEL", "qwen2.5:0.5b"))
+    LLM_MODEL: str    = _provider_value("MODEL",    os.getenv("OLLAMA_MODEL", "qwen2.5:0.5b"))
+    LLM_BASE_URL: str = _provider_value("URL", "http://localhost:11434/v1/")
+    LLM_API_KEY: str  = _provider_value("API_KEY",  "ollama")
 
     # Tools
     TAVILY_API_KEY: str = os.getenv("TAVILY_API_KEY", "")
     TAVILY_URL = "https://api.tavily.com/search"
     MAX_TOOL_ROUNDS: int = int(os.getenv("MAX_TOOL_ROUNDS", "3"))
-    TOOL_SELECT_MODEL: str = os.getenv("TOOL_SELECT_MODEL", "qwen2.5:0.5b")
-    TOOL_SELECT_TIMEOUT: float = float(os.getenv("TOOL_SELECT_TIMEOUT", "8.0"))
-    QUERY_EXPAND_MODEL: str = os.getenv("QUERY_EXPAND_MODEL", "qwen2.5:0.5b")
-
+    
     # RAG
     OLLAMA_EMBED_URL: str = os.getenv("OLLAMA_EMBED_URL", "http://localhost:11434/api/embed")
     EMBED_MODEL: str = os.getenv("EMBED_MODEL", "bge-m3")

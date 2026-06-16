@@ -1,13 +1,20 @@
 # Python cache
 __pycache__/
+**/__pycache__/
 *.pyc
 *.pyo
 *.pyd
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
 
 .env
 
 开发日志.md
 *.db
+*.db-shm
+*.db-wal
+*.bak
 companion-ai/test/
 companion-ai/docs/
 companion-ai/data/chroma/
