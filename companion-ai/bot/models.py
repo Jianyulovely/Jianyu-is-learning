@@ -7,6 +7,8 @@ class RequestPayload(BaseModel):
     history_messages: list[dict]
     images: list[str] =  Field(default_factory=list) 
     tool_context: str = ""
+    tools: list[dict] = Field(default_factory=list)
+    response_format: dict | None = None
     temperature: float = 0.85
     top_p: float = 0.9
 

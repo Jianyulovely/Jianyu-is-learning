@@ -5,7 +5,7 @@ from config import config
 
 from core.models import ChatRequest
 from core.memory_manage.memory_model import *
-from core.http_client import safe_post
+from core.net.http import safe_post
 from core.memory_manage.utils import parse_llm_json_result
 from bot.models import ChatTurnContext
 

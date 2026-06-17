@@ -7,7 +7,7 @@ from zoneinfo import ZoneInfo
 import aiosqlite
 
 from config import config
-from core.http_client import safe_post
+from core.net.http import safe_post
 from core.models import ChatRequest
 from core.memory_manage.utils import parse_llm_json_result
 from core.memory_manage.memory_model import MemoryQueryContext, MemorySummary, ActiveMemory, ActiveMemoryList

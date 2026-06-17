@@ -1,22 +1,30 @@
 from __future__ import annotations
 
 import logging
+from dataclasses import dataclass
 from typing import Protocol
 
 from bot.models import RequestPayload
 from config import config
-from core.http_client import safe_post
+from core.net.http import safe_post
 
 logger = logging.getLogger(__name__)
 
 
+@dataclass
+class LLMResult:
+    reply: str
+    tool_calls: list[dict]
+    usage: dict
+
+
 class LLMClient(Protocol):
-    async def chat(self, payload: RequestPayload) -> str:
+    async def chat(self, payload: RequestPayload) -> LLMResult:
         ...
 
 
 class HttpLLMClient:
-    async def chat(self, payload: RequestPayload) -> str:
+    async def chat(self, payload: RequestPayload) -> LLMResult:
         system_prompt = payload.system_prompt
         effective_messages = list(payload.history_messages)
 
@@ -40,6 +48,8 @@ class HttpLLMClient:
             "system_prompt": system_prompt,
             "messages": effective_messages,
             "images": payload.images,
+            "tools": payload.tools,
+            "response_format": payload.response_format,
             "temperature": payload.temperature,
             "top_p": payload.top_p,
         }
@@ -47,4 +57,9 @@ class HttpLLMClient:
         if resp.status_code >= 400:
             logger.error("LLM /chat failed: %s %s", resp.status_code, resp.text)
         resp.raise_for_status()
-        return resp.json().get("reply", "")
+        data = resp.json()
+        return LLMResult(
+            reply=data.get("reply", ""),
+            tool_calls=data.get("tool_calls", []) or [],
+            usage=data.get("usage", {}) or {},
+        )

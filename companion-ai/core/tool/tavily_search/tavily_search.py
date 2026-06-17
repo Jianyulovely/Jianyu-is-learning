@@ -8,7 +8,7 @@ if __package__ in (None, ""):
     sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
 
 from config import config
-from core.http_client import safe_post
+from core.net.http import safe_post
 from core.tool.base import BaseTool
 from core.tool.tavily_search.base import TavilySearchArgs, TavilySearchResponse
 

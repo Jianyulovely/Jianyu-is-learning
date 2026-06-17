@@ -14,12 +14,12 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from telegram.ext import Application
 
-import core.http_client as http_client
+import core.net.http as http_client
 from bot.telegram_channel import TelegramChannel
 from core.agent_service import AgentService
-from core.message_bus import MessageBus
-from core.messages import InboundMessage
-from core.session_manager import SessionManager
+from core.messaging.bus import MessageBus
+from core.messaging.models import InboundMessage, OutboundMessage
+from core.session.manager import SessionManager
 from db.models import init_db
 
 logging.basicConfig(
@@ -34,6 +34,14 @@ logger = logging.getLogger(__name__)
 async def _agent_worker(bus: MessageBus, agent: AgentService) -> None:
     while True:
         inbound: InboundMessage = await bus.consume_inbound()
+        # await bus.publish_outbound(
+        #     OutboundMessage(
+        #         channel=inbound.channel,
+        #         chat_id=inbound.chat_id,
+        #         content="收到啦~等下回复你哦",
+        #         metadata={"kind": "processing"},
+        #     )
+        # )
         outbound = await agent.handle(inbound)
         await bus.publish_outbound(outbound)
 

@@ -18,10 +18,10 @@ from telegram.ext import (
 )
 
 from config import config
-from core.image_describer import describe_image
-from core.message_bus import MessageBus
-from core.messages import InboundMessage, OutboundMessage
-from core.session_manager import SessionManager
+from core.messaging.bus import MessageBus
+from core.messaging.models import InboundMessage, OutboundMessage
+from core.session.manager import SessionManager
+from core.vision.describer import describe_image
 
 logger = logging.getLogger(__name__)
 

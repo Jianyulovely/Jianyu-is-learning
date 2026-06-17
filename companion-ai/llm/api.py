@@ -27,8 +27,8 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 from config import config
-import core.http_client as http_client
-from core.http_client import safe_post, safe_get
+import core.net.http as http_client
+from core.net.http import safe_post, safe_get
 
 
 _llm_client: AsyncOpenAI | None = None
@@ -130,9 +130,13 @@ async def chat(req: ChatRequest):
                 ],
             })
         else:
-            msg: dict = {"role": m.role, "content": m.content}
+            msg: dict = {"role": m.role, "content": m.content or ""}
             if m.tool_calls:
                 msg["tool_calls"] = m.tool_calls
+            if m.tool_call_id:
+                msg["tool_call_id"] = m.tool_call_id
+            if m.name:
+                msg["name"] = m.name
             messages.append(msg)
     
     # 调用计时
@@ -158,6 +162,7 @@ async def chat(req: ChatRequest):
         if choice.message.tool_calls:
             tool_calls = [
                 {"id": tc.id,
+                 "type": tc.type or "function",
                  "function": {"name": tc.function.name, "arguments": tc.function.arguments}}
                 for tc in choice.message.tool_calls
             ]

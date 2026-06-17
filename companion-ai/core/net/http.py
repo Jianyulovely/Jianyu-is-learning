@@ -1,9 +1,3 @@
-"""
-全局共享的 httpx.AsyncClient 单例。
-- 默认 timeout：connect=5s，read=120s，write=10s（适配本地 LLM 推理）
-- 各调用方可在单次请求时用 timeout= 覆盖
-- safe_post / safe_get：内置三次重试，网络抖动时自动恢复
-"""
 import logging
 
 import httpx
@@ -37,7 +31,7 @@ async def safe_post(url: str, *, retries: int = 3, **kwargs) -> httpx.Response:
         except Exception as e:
             if attempt == retries - 1:
                 raise
-            logger.warning(f"POST {url} attempt {attempt + 1} failed: {e}, retrying...")
+            logger.warning("POST %s attempt %s failed: %s, retrying...", url, attempt + 1, e)
 
 
 async def safe_get(url: str, *, retries: int = 3, **kwargs) -> httpx.Response:
@@ -48,4 +42,4 @@ async def safe_get(url: str, *, retries: int = 3, **kwargs) -> httpx.Response:
         except Exception as e:
             if attempt == retries - 1:
                 raise
-            logger.warning(f"GET {url} attempt {attempt + 1} failed: {e}, retrying...")
+            logger.warning("GET %s attempt %s failed: %s, retrying...", url, attempt + 1, e)

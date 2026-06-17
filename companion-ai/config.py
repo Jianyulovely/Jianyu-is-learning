@@ -43,6 +43,9 @@ class Config:
 
     # Conversation
     MAX_HISTORY_TURNS: int = int(os.getenv("MAX_HISTORY_TURNS", "12"))
+    MAX_HISTORY_MSGS: int = int(os.getenv("MAX_HISTORY_MSGS", "24"))
+    SESSION_TTL: int = int(os.getenv("SESSION_TTL", "7200"))
+    INTIMACY_INIT: int = int(os.getenv("INTIMACY_INIT", "20"))
 
     # Role
     DEFAULT_ROLE: str = os.getenv("DEFAULT_ROLE", "jiejie")

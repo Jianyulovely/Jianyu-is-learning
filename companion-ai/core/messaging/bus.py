@@ -4,7 +4,7 @@ import asyncio
 import logging
 from collections.abc import Awaitable, Callable
 
-from core.messages import InboundMessage, OutboundMessage
+from core.messaging.models import InboundMessage, OutboundMessage
 
 logger = logging.getLogger(__name__)
 

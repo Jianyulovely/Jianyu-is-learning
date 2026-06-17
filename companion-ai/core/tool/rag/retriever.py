@@ -7,7 +7,7 @@ import logging
 import httpx
 
 from config import config
-from core.http_client import safe_post
+from core.net.http import safe_post
 from rag.chroma_client import get_collection
 
 logger = logging.getLogger(__name__)

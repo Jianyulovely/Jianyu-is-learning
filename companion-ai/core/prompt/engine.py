@@ -4,8 +4,7 @@ import yaml
 
 from core.models import SystemPromptContext
 
-
-ROLES_DIR = Path(__file__).parent.parent / "roles" / "personas"
+ROLES_DIR = Path(__file__).parent.parent.parent / "roles" / "personas"
 
 _INTIMACY_STYLE: list[tuple[int, str]] = [
     (30, "当前关系偏陌生，回复要自然、礼貌，不要过度亲密。"),
@@ -37,48 +36,37 @@ class PromptEngine:
         return _INTIMACY_STYLE[-1][1]
 
     def build_system_prompt(self, context: SystemPromptContext) -> str:
-        """对话系统提示词内容"""
-        
-        role_id = context.role_id
-        user_name = context.user_name
-        emotion = context.emotion
-        intimacy_level = context.intimacy_level
-        current_time_iso = context.current_time_iso
-        timezone_name = context.timezone_name
-        image_context = context.image_context
-        memory_summary = context.memory_summary
-        
-        role = self._get_role(role_id)
+        role = self._get_role(context.role_id)
         parts: list[str] = []
 
         base_prompt = str(role.get("base_prompt", "")).strip()
         if base_prompt:
             parts.append(base_prompt)
 
-        parts.append(self._intimacy_desc(intimacy_level))
+        parts.append(self._intimacy_desc(context.intimacy_level))
 
         if context.emotion.tag != "neutral":
             parts.append(
-                f"{user_name} 当前情绪倾向是 {emotion.tag}。回复时请注意：{emotion.tone_instruction}"
+                f"{context.user_name} 当前情绪倾向是 {context.emotion.tag}。回复时请注意：{context.emotion.tone_instruction}"
             )
-        elif emotion.tone_instruction:
-            parts.append(str(emotion.tone_instruction))
+        elif context.emotion.tone_instruction:
+            parts.append(str(context.emotion.tone_instruction))
 
-        if current_time_iso:
-            if timezone_name:
+        if context.current_time_iso:
+            if context.timezone_name:
                 parts.append(
-                    f"当前时间是 {current_time_iso}，时区是 {timezone_name}。请正确理解今天、明天、下周等相对时间。"
+                    f"当前时间是 {context.current_time_iso}，时区是 {context.timezone_name}。请正确理解今天、明天、下周等相对时间。"
                 )
             else:
                 parts.append(
-                    f"当前时间是 {current_time_iso}。请正确理解今天、明天、下周等相对时间。"
+                    f"当前时间是 {context.current_time_iso}。请正确理解今天、明天、下周等相对时间。"
                 )
 
-        if image_context:
-            parts.append(f"用户最近发送过一张图片，内容描述是：{image_context}")
+        if context.image_context:
+            parts.append(f"用户最近发送过一张图片，内容描述是：{context.image_context}")
 
-        if memory_summary:
-            parts.append(f"关于 {user_name}，你记得这些长期信息：\n{memory_summary}")
+        if context.memory_summary:
+            parts.append(f"关于 {context.user_name}，你记得这些长期信息：\n{context.memory_summary}")
 
         parts.append(
             "请保持自然、连贯、口语化的中文表达。"
