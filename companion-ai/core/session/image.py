@@ -13,14 +13,19 @@ logger = logging.getLogger(__name__)
 
 
 async def get_last_image_desc(user_id: int) -> str:
-    r = get_redis()
-    raw = await r.get(image_desc_key(user_id))
-    return raw if isinstance(raw, str) else (raw.decode() if raw else "")
+    try:
+        raw = await get_redis().get(image_desc_key(user_id))
+        return raw if isinstance(raw, str) else (raw.decode() if raw else "")
+    except Exception as exc:
+        logger.warning("image desc redis get failed user_id=%s: %s", user_id, exc)
+        return ""
 
 
 async def set_last_image_desc(user_id: int, desc: str) -> None:
-    r = get_redis()
-    await r.set(image_desc_key(user_id), desc, ex=config.SESSION_TTL)
+    try:
+        await get_redis().set(image_desc_key(user_id), desc, ex=config.SESSION_TTL)
+    except Exception as exc:
+        logger.warning("image desc redis set failed user_id=%s: %s", user_id, exc)
 
 
 async def save_image_memory(user_id: int, desc: str) -> None:

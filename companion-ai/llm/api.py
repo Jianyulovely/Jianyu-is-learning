@@ -142,14 +142,19 @@ async def chat(req: ChatRequest):
     # 调用计时
     started = time.perf_counter()
     try:
-        kwargs: dict = dict(
-            model=_llm_model,
-            messages=messages,
-            temperature=req.temperature,
-            top_p=req.top_p,
-        )
+        kwargs: dict = {
+            "model": _llm_model,
+            "messages": messages,
+        }
+        if config.LLM_SEND_SAMPLING_PARAMS:
+            if req.temperature is not None:
+                kwargs["temperature"] = req.temperature
+            if req.top_p is not None:
+                kwargs["top_p"] = req.top_p
         if req.tools:
             kwargs["tools"] = req.tools
+            if config.LLM_SUPPORTS_PARALLEL_TOOL_CALLS_FLAG:
+                kwargs["parallel_tool_calls"] = req.parallel_tool_calls
         if req.response_format:
             kwargs["response_format"] = req.response_format
 

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 import logging
 from typing import Any
@@ -12,6 +13,15 @@ from core.llm.client import LLMResult
 from core.agent.state import AgentTaskState
 
 logger = logging.getLogger(__name__)
+
+# Tool 输出回灌 LLM 时的整体长度上限。Tavily 多结果 + 截断后仍可能超长，统一兜底。
+MAX_OBSERVATION_CHARS = 4000
+OBSERVATION_HEAD_CHARS = 2500
+OBSERVATION_TAIL_CHARS = 1500
+
+
+class ToolArgumentError(Exception):
+    """Raised by parse_tool_arguments when the LLM emits unparseable arguments."""
 
 
 def append_assistant_result(task: AgentTaskState, result: LLMResult) -> None:
@@ -34,23 +44,48 @@ def tool_message(*, tool_call_id: str, name: str, content: str) -> dict[str, Any
 
 
 def parse_tool_arguments(raw: Any) -> dict[str, Any]:
+    """Parse a tool_call.function.arguments payload.
+
+    Returns:
+        dict of parsed kwargs, suitable for ``**arguments`` into a tool.
+    Raises:
+        ToolArgumentError: when payload cannot be coerced into a kwargs dict. Caller
+        should turn this into a tool_message error string instead of calling the tool
+        with invalid kwargs (AUDIT T-05).
+    """
     if isinstance(raw, dict):
         return raw
-    if not raw:
+    if raw is None or raw == "":
         return {}
     try:
         parsed = json.loads(str(raw))
-    except json.JSONDecodeError:
-        return {"_raw": str(raw)}
-    return parsed if isinstance(parsed, dict) else {"value": parsed}
+    except json.JSONDecodeError as exc:
+        raise ToolArgumentError(f"arguments are not valid JSON: {exc}") from exc
+    if not isinstance(parsed, dict):
+        raise ToolArgumentError(
+            f"arguments must decode to an object, got {type(parsed).__name__}"
+        )
+    return parsed
+
+
+def _truncate_observation(text: str) -> str:
+    if len(text) <= MAX_OBSERVATION_CHARS:
+        return text
+    omitted = len(text) - OBSERVATION_HEAD_CHARS - OBSERVATION_TAIL_CHARS
+    return (
+        f"{text[:OBSERVATION_HEAD_CHARS]}"
+        f"\n... observation truncated, {omitted} characters omitted ...\n"
+        f"{text[-OBSERVATION_TAIL_CHARS:]}"
+    )
 
 
 def format_tool_result(result: Any) -> str:
     error = getattr(result, "error", None)
     if error:
-        return f"[tool error] {error}"
+        return _truncate_observation(f"[tool error] {error}")
     output = getattr(result, "output", result)
-    return str(output or "")
+    text = str(output or "")
+    return _truncate_observation(text)
 
 
 def normalize_history(history: list[dict]) -> list[dict[str, Any]]:
@@ -79,6 +114,9 @@ def append_agent_instructions(system_prompt: str) -> str:
         + "- Understand the user's goal first, then decide whether a tool is needed.\n"
         + "- Use tavily_search for current or external factual information.\n"
         + "- Use ask_human only when critical information is missing and cannot be inferred safely.\n"
+        + "- Use computer_shell for local computer command-line tasks when needed.\n"
+        + "- When the user says desktop, resolve it with PowerShell [Environment]::GetFolderPath('Desktop'); do not guess a path.\n"
+        + "- After creating or writing a file with computer_shell, verify it with read-only commands such as Test-Path and Get-Content before saying it is done.\n"
         + "- Use terminate when the task is complete or cannot proceed further.\n"
         + "- Do not fabricate tool results.\n"
         + "- Do not expose internal JSON, tool calls, or implementation details to the user.\n"
@@ -119,7 +157,14 @@ def load_role_for_user(db_user: dict | None, username: str) -> dict[str, Any]:
 
 
 def coerce_user_id(value: str) -> int:
+    """Coerce a sender id into a stable int.
+
+    Numeric ids pass through. Non-numeric ids are mapped via SHA-1 so the result
+    survives Python's randomized ``hash()`` (AUDIT B-02). Stable across restarts.
+    """
     try:
         return int(value)
     except (TypeError, ValueError):
-        return abs(hash(str(value))) % (2**31)
+        digest = hashlib.sha1(str(value).encode("utf-8")).hexdigest()
+        # 取前 12 个十六进制位 → 48 bit，仍在 SQLite INTEGER 范围内
+        return int(digest[:12], 16)

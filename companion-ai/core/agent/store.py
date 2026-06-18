@@ -24,7 +24,11 @@ def _task_key(session_key: str) -> str:
 
 
 async def load_task(session_key: str) -> AgentTaskState | None:
-    raw = await get_redis().get(_task_key(session_key))
+    try:
+        raw = await get_redis().get(_task_key(session_key))
+    except Exception as exc:
+        logger.warning("load task from redis failed session_key=%s: %s", session_key, exc)
+        return None
     if not raw:
         return None
     try:
@@ -36,12 +40,18 @@ async def load_task(session_key: str) -> AgentTaskState | None:
 
 
 async def save_task(session_key: str, task: AgentTaskState) -> None:
-    await get_redis().set(
-        _task_key(session_key),
-        task.model_dump_json(),
-        ex=config.SESSION_TTL,
-    )
+    try:
+        await get_redis().set(
+            _task_key(session_key),
+            task.model_dump_json(),
+            ex=config.SESSION_TTL,
+        )
+    except Exception as exc:
+        logger.warning("save task to redis failed session_key=%s: %s", session_key, exc)
 
 
 async def delete_task(session_key: str) -> None:
-    await get_redis().delete(_task_key(session_key))
+    try:
+        await get_redis().delete(_task_key(session_key))
+    except Exception as exc:
+        logger.warning("delete task from redis failed session_key=%s: %s", session_key, exc)

@@ -81,12 +81,27 @@ class TelegramChannel:
                 )
                 return
             except Exception as exc:
+                # AUDIT B-10: malformed HTML in our generated reply can put Telegram
+                # into a permanent 400 loop. On the last attempt, drop to plain text.
                 if attempt == 2:
-                    logger.error(
-                        "[telegram] send failed after 3 attempts chat_id=%s err=%s",
-                        msg.chat_id,
-                        exc,
-                    )
+                    try:
+                        await bot.send_message(
+                            chat_id=msg.chat_id,
+                            text=msg.content,
+                        )
+                        logger.warning(
+                            "[telegram] HTML failed 3x, sent as plain text chat_id=%s err=%s",
+                            msg.chat_id,
+                            exc,
+                        )
+                        return
+                    except Exception as plain_exc:
+                        logger.error(
+                            "[telegram] send failed after 3 attempts chat_id=%s html_err=%s plain_err=%s",
+                            msg.chat_id,
+                            exc,
+                            plain_exc,
+                        )
                 else:
                     logger.warning(
                         "[telegram] send attempt %s failed chat_id=%s err=%s",
@@ -223,7 +238,12 @@ class TelegramChannel:
         await update.message.reply_text(text)
 
     async def on_message(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
-        text = (update.message.text if update.message else "" or "").strip()
+        # AUDIT B-13: original code had operator-precedence ambiguity that could
+        # AttributeError on edge messages. Be explicit: extract text only when
+        # update.message exists.
+        if not update.message:
+            return
+        text = (update.message.text or "").strip()
         if not text:
             return
         await self.publish_user_message(update, context, content=text)
@@ -237,17 +257,17 @@ class TelegramChannel:
         image_b64 = base64.b64encode(image_bytes).decode("utf-8")
         user_message = (update.message.caption or "").strip() or "请看看这张图片。"
 
+        # 图片描述在 agent context 内同步生成（AUDIT B-01），不再 fire-and-forget。
         await self.publish_user_message(
             update,
             context,
             content=user_message,
             media=[image_b64],
         )
-        asyncio.create_task(
-            self._save_image_desc_async(update.effective_user.id, image_b64)
-        )
 
     async def _save_image_desc_async(self, user_id: int, image_b64: str):
+        """Deprecated: image description is now generated synchronously in
+        ``core/agent/context.prepare_agent_context`` (AUDIT B-01)."""
         try:
             desc = await describe_image(image_b64)
             if desc:

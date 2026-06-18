@@ -24,7 +24,14 @@
       "Bash(del *)",
       "Bash(python fix_fonts.py)",
       "Bash(python fix_brackets.py)",
-      "Bash(python add_author.py)"
+      "Bash(python add_author.py)",
+      "Bash(python -c \"import ast; ast.parse\\(open\\('core/agent_service.py', encoding='utf-8'\\).read\\(\\)\\); ast.parse\\(open\\('core/tool/computer/shell.py', encoding='utf-8'\\).read\\(\\)\\); ast.parse\\(open\\('core/tool/computer/safety.py', encoding='utf-8'\\).read\\(\\)\\); ast.parse\\(open\\('core/agent/state.py', encoding='utf-8'\\).read\\(\\)\\); print\\('P0 syntax OK'\\)\")",
+      "Bash(python *)",
+      "Bash(where python *)",
+      "Bash(where py *)",
+      "Bash(where conda *)",
+      "Bash(D:/py39/python.exe *)",
+      "Bash(D:/miniforge/envs/companion-ai/python.exe *)"
     ]
   }
 }

@@ -66,9 +66,9 @@ class BaseTool(ABC, BaseModel):
     parameters: Optional[dict] = None
     # _schemas: Dict[str, List[ToolSchema]] = {}
 
-    class Config:
-        arbitrary_types_allowed = True
-        underscore_attrs_are_private = False
+    model_config = {
+        "arbitrary_types_allowed": True,
+    }
 
     async def __call__(self, **kwargs) -> Any:
         """Execute the tool with given parameters."""

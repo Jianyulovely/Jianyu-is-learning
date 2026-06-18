@@ -2,7 +2,10 @@ from __future__ import annotations
 
 from typing import Optional
 
-from core.session.cleanup import clear_history as clear_history_data
+from core.session.cleanup import (
+    clear_history as clear_history_data,
+    reset_all as reset_all_data,
+)
 from core.session.history import (
     append_message as append_history_message,
     get_history as get_history_messages,
@@ -62,7 +65,12 @@ class SessionManager:
         await update_user_role(user_id, role_id)
 
     async def clear_history(self, user_id: int):
+        """Clear conversation history only — intimacy is preserved (AUDIT B-04)."""
         await clear_history_data(user_id)
+
+    async def reset_all(self, user_id: int):
+        """Hard reset including intimacy and state. Use sparingly."""
+        await reset_all_data(user_id)
 
     async def get_last_image_desc(self, user_id: int) -> str:
         return await get_cached_image_desc(user_id)

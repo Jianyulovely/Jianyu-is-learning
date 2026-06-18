@@ -52,6 +52,7 @@ class HttpLLMClient:
             "response_format": payload.response_format,
             "temperature": payload.temperature,
             "top_p": payload.top_p,
+            "parallel_tool_calls": payload.parallel_tool_calls,
         }
         resp = await safe_post(f"{config.LLM_API_URL}/chat", json=request_body)
         if resp.status_code >= 400:
