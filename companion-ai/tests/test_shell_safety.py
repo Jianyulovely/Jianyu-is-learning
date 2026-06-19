@@ -93,10 +93,10 @@ def test_resolve_cwd_allows_relative_inside_project():
 @pytest.mark.parametrize(
     "bad",
     [
-        "../..",
+        # 这些路径不在任何 allowed root 下，应拒绝
         "../../../etc/passwd",
-        "C:/Users/Administrator",
         "C:/Windows/System32",
+        # 环境变量引用未展开 → 直接拒绝
         "~/.ssh",
         "%USERPROFILE%",
         "$HOME",
@@ -105,3 +105,14 @@ def test_resolve_cwd_allows_relative_inside_project():
 def test_resolve_cwd_rejects_escaping(bad):
     with pytest.raises(ValueError):
         _resolve_cwd(bad)
+
+
+def test_resolve_cwd_allows_user_desktop():
+    # ~/Desktop 是 file_editor 白名单的一部分（哪怕物理目录可能不存在，
+    # _resolve_cwd 只校验包含关系；具体的"目录存在"由 _run_command 检查）
+    from pathlib import Path
+
+    desktop = Path.home() / "Desktop"
+    if not desktop.exists():
+        pytest.skip("no Desktop on this machine")
+    assert _resolve_cwd(str(desktop)) == desktop.resolve()

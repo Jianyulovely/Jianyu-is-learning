@@ -51,8 +51,12 @@ core/
 │   ├── base.py, tool_collection.py
 │   ├── ask_human.py, terminate.py
 │   ├── planning.py           #   PlanningTool (stage-aware: create vs execute)
+│   ├── file_editor/          #   StrReplaceEditor (ported from OpenManus)
+│   │   ├── editor.py         #     view/create/str_replace/insert/undo_edit
+│   │   ├── operator.py       #     LocalFileOperator (UTF-8, async)
+│   │   └── safety.py         #     ensure_allowed() — shared path allowlist
 │   ├── computer/             #   PowerShell shell tool
-│   │   ├── shell.py          #     cwd locked under PROJECT_ROOT (AUDIT T-01)
+│   │   ├── shell.py          #     cwd uses file_editor's allowlist; UTF-8 preamble
 │   │   ├── safety.py         #     deny/confirm classifier
 │   │   └── output.py
 │   ├── tavily_search/
@@ -111,6 +115,8 @@ core/
   `AgentService.handle` (PlanningFlow resume, cancel, status, completion).
 - `tests/test_planning_flow_routing.py` — `[AGENT_NAME]` step-type dispatch
   + `terminate` tool aborting the whole plan (OpenManus parity).
+- `tests/test_file_editor.py` — StrReplaceEditor end-to-end (create/view/
+  str_replace/insert/undo) + path allowlist checks.
 - `tests/test_approval_reply.py` — parameterized reject/approve cases
   (regression for AUDIT P-01).
 - `tests/test_shell_safety.py` — classify_command coverage + `_resolve_cwd`

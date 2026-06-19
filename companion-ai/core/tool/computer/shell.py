@@ -9,11 +9,21 @@ from typing import Any
 from core.tool.base import BaseTool, ToolResult
 from core.tool.computer.output import build_command_output
 from core.tool.computer.safety import RiskLevel, classify_command
+from core.tool.file_editor.safety import ensure_allowed as ensure_path_allowed
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
 DEFAULT_TIMEOUT_SECONDS = 15
 MAX_TIMEOUT_SECONDS = 60
+
+# Prepended to every PowerShell command so output (and -Encoding-aware writes)
+# default to UTF-8. Fixes the Windows GBK pitfall called out in AUDIT X-03;
+# otherwise Chinese / Japanese output decodes as `?` on the bot side.
+_UTF8_PREAMBLE = (
+    "$OutputEncoding = [Console]::OutputEncoding = "
+    "[System.Text.UTF8Encoding]::new(); "
+    "[Console]::InputEncoding = [System.Text.UTF8Encoding]::new(); "
+)
 
 # 写入类前缀：执行成功后强制追加 Test-Path 验证。
 _WRITE_VERIFICATION_MARKERS = (
@@ -33,11 +43,15 @@ _WRITE_VERIFICATION_MARKERS = (
 class ComputerShellTool(BaseTool):
     name: str = "computer_shell"
     description: str = (
-        "Run a non-interactive local PowerShell command for computer operation tasks. "
-        "Use this only for bounded command-line work. Read-only commands can run directly; "
-        "commands that write files, install dependencies, access the network, launch GUI apps, "
-        "or start long-running processes will be blocked and should be confirmed with ask_human first. "
-        "The working directory is locked under the companion-ai project root."
+        "Run a non-interactive local PowerShell command for shell-style tasks "
+        "(Get-ChildItem, git, npm/pip, system queries). "
+        "For creating, reading, or editing local files prefer str_replace_editor — "
+        "it handles UTF-8 and avoids PowerShell quoting issues. "
+        "Read-only commands run directly; commands that write files, install "
+        "dependencies, access the network, launch GUI apps, or start long-running "
+        "processes will be blocked and should be confirmed with ask_human first. "
+        "The working directory must be within the allowed roots (project root, "
+        "Desktop/Documents/Downloads, or FILE_EDITOR_ALLOWED_DIRS)."
     )
     parameters: dict = {
         "type": "object",
@@ -49,8 +63,11 @@ class ComputerShellTool(BaseTool):
             "cwd": {
                 "type": "string",
                 "description": (
-                    "Optional working directory relative to the project root. "
-                    "Absolute paths or paths escaping the project root will be rejected."
+                    "Optional working directory. Relative paths resolve against the "
+                    "companion-ai project root. Absolute paths must sit under one of "
+                    "the allowed roots (project root, Desktop/Documents/Downloads, "
+                    "or FILE_EDITOR_ALLOWED_DIRS); environment variables are not "
+                    "expanded."
                 ),
             },
             "timeout": {
@@ -111,6 +128,7 @@ class ComputerShellTool(BaseTool):
 
         timeout_seconds = _normalize_timeout(timeout)
         started = time.perf_counter()
+        full_command = _UTF8_PREAMBLE + command
         try:
             process = await asyncio.create_subprocess_exec(
                 "powershell",
@@ -120,7 +138,7 @@ class ComputerShellTool(BaseTool):
                 "-ExecutionPolicy",
                 "Bypass",
                 "-Command",
-                command,
+                full_command,
                 cwd=str(workdir),
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE,
@@ -168,7 +186,7 @@ class ComputerShellTool(BaseTool):
         if not target:
             return {"status": "skipped", "reason": "Could not infer write target."}
 
-        verify_cmd = f"Test-Path -LiteralPath {shlex.quote(target)}"
+        verify_cmd = _UTF8_PREAMBLE + f"Test-Path -LiteralPath {shlex.quote(target)}"
         try:
             process = await asyncio.create_subprocess_exec(
                 "powershell",
@@ -196,10 +214,16 @@ class ComputerShellTool(BaseTool):
 
 
 def _resolve_cwd(cwd: str | None) -> Path:
-    """Resolve cwd under PROJECT_ROOT; reject any path that escapes it.
+    """Resolve cwd under one of the allowed roots.
 
-    Rejects: absolute paths outside project root, paths using ``..`` to escape,
-    paths starting with ``~`` or ``$``/``%`` env-var references.
+    Shares the same allowlist as the structured file editor
+    (:func:`core.tool.file_editor.safety.ensure_allowed`):
+    - project root
+    - ~/Desktop, ~/Documents, ~/Downloads
+    - anything in FILE_EDITOR_ALLOWED_DIRS
+
+    Rejects: env-var refs (``%TEMP%``, ``$HOME``), leading ``~``, and
+    absolute paths outside every allowed root.
     """
     if not cwd:
         return PROJECT_ROOT
@@ -208,7 +232,6 @@ def _resolve_cwd(cwd: str | None) -> Path:
     if not raw:
         return PROJECT_ROOT
 
-    # 禁止环境变量/家目录扩展，避免 %USERPROFILE% / ~ 偷渡
     if raw.startswith("~") or "%" in raw or "$" in raw:
         raise ValueError("cwd may not reference environment variables or home dir.")
 
@@ -219,13 +242,10 @@ def _resolve_cwd(cwd: str | None) -> Path:
         resolved = (PROJECT_ROOT / candidate).resolve()
 
     try:
-        resolved.relative_to(PROJECT_ROOT)
+        return ensure_path_allowed(resolved)
     except ValueError as exc:
-        raise ValueError(
-            f"cwd must stay within project root {PROJECT_ROOT}, got {resolved}"
-        ) from exc
-
-    return resolved
+        # Re-raise with the cwd-specific framing so the agent sees a clear message.
+        raise ValueError(f"cwd not allowed: {exc}") from exc
 
 
 def _normalize_timeout(timeout: int | None) -> int:

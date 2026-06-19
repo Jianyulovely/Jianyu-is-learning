@@ -44,6 +44,7 @@ from core.prompt.engine import PromptEngine
 from core.session.manager import SessionManager
 from core.tool.ask_human import AskHuman
 from core.tool.computer import ComputerShellTool
+from core.tool.file_editor import StrReplaceEditor
 from core.tool.planning import PlanningTool
 from core.tool.tavily_search import TavilySearchTool
 from core.tool.terminate import Terminate
@@ -86,6 +87,7 @@ class AgentService:
         self._llm_client = llm_client or HttpLLMClient()
         self._available_tools = available_tools or ToolCollection(
             PlanningTool(stage="execute"),
+            StrReplaceEditor(),
             TavilySearchTool(),
             ComputerShellTool(),
             AskHuman(),

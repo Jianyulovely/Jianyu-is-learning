@@ -62,6 +62,11 @@ class Config:
     LLM_SUPPORTS_PARALLEL_TOOL_CALLS_FLAG: bool = _env_bool(
         "LLM_SUPPORTS_PARALLEL_TOOL_CALLS_FLAG", True
     )
+    # 结构化文件编辑工具（str_replace_editor）与 computer_shell 的 cwd 校验共用。
+    # 项目根 + 用户家目录下 Desktop/Documents/Downloads 永远被允许；
+    # 此处追加额外的绝对路径，逗号分隔。例如：
+    #   FILE_EDITOR_ALLOWED_DIRS=D:\data,D:\workspace
+    FILE_EDITOR_ALLOWED_DIRS: str = os.getenv("FILE_EDITOR_ALLOWED_DIRS", "")
 
     # RAG
     OLLAMA_EMBED_URL: str = os.getenv("OLLAMA_EMBED_URL", "http://localhost:11434/api/embed")
