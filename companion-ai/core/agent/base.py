@@ -53,8 +53,7 @@ class BaseAgent(BaseModel, ABC):
         """Run a block under a target task status; on exception flip to failed.
 
         Mirrors OpenManus app/agent/base.py:58-82 but uses the project's task.status
-        field. On exception we save the task before re-raising so the next turn can
-        observe the failure (AUDIT P-05).
+        field.
         """
         previous = self.task.status
         self.task.status = new_status  # type: ignore[assignment]

@@ -28,7 +28,15 @@ Telegram bot + LLM service + local memory/tooling.
 
 1. Start Redis
 2. Start the LLM service: `python llm/api.py`
-3. Start the bot: `python main.py`
+3. Start Telegram: `python main.py tg`
+
+CLI mode is available for local terminal chat:
+
+```bash
+python main.py cli
+```
+
+CLI mode uses the same agent runtime and does not require `TELEGRAM_BOT_TOKEN`.
 
 ## Notes
 

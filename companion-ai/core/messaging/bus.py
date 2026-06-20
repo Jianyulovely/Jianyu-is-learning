@@ -28,9 +28,11 @@ class MessageBus:
         await self._outbound.put(msg)
 
     def subscribe_outbound(self, channel: str, callback: OutboundCallback) -> None:
+        """订阅出栈消息"""
         self._subscribers.setdefault(channel, []).append(callback)
 
     async def dispatch_outbound(self) -> None:
+        """将智能体的回复分发给对应渠道的订阅者"""
         self._running = True
         while self._running:
             try:
