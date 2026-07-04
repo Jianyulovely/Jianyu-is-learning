@@ -40,6 +40,7 @@ async def load_task(session_key: str) -> AgentTaskState | None:
 
 
 async def save_task(session_key: str, task: AgentTaskState) -> None:
+    """任务状态 异步持久化到 Redis"""
     try:
         await get_redis().set(
             _task_key(session_key),

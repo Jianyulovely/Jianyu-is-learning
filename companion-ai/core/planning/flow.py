@@ -252,12 +252,8 @@ class PlanningFlow:
         return f"Plan for: {text}"
 
     def _looks_complex(self, user_message: str, images: list[str]) -> bool:
-        """Fast heuristic: should we even ASK the LLM about planning?
-
-        Designed conservatively after 2026-06-18 incident — single-step asks
-        (write one file, look up one fact) were falsely escalated to planning
-        and the LLM repeated the work 3x. We now look for explicit multi-step
-        signals; everything else stays in ChatFlow.
+        """
+        快速判断：用户请求内容是否有多步骤关键词或者输入为长指令
         """
         text = user_message.strip()
         if not text:

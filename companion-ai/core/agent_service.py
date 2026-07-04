@@ -230,11 +230,8 @@ class AgentService:
     # ---- approval policy (used by Flow layer) ----------------------------
 
     def _is_approval_reply(self, text: str) -> bool:
-        """Robust approval detection (AUDIT P-01).
-
-        Reject-first: scan negation set; English uses word boundaries so 'no'
-        in 'nothing' is ignored. Long sentences (>=20 chars) never count as
-        approval — they're statements, not confirmations.
+        """
+        判断用户的回复是否为"批准/确认"指令
         """
         raw = text.strip()
         if not raw:

@@ -55,6 +55,7 @@ class CLIChannel:
                 if not stripped:
                     continue
                 if stripped.lower() in _EXIT_COMMANDS:
+                    # 退出指令
                     break
                 if stripped.startswith("/"):
                     await self._handle_slash_command(stripped)
@@ -72,9 +73,10 @@ class CLIChannel:
             pass
         finally:
             self._running = False
-            self._output("\nBye.\n")
+            self._output("\n再见！\n")
 
     async def _handle_slash_command(self, raw: str) -> None:
+        """处理控制指令内容"""
         command = raw.split(maxsplit=1)[0].lower()
         if command == "/reset":
             await self._cmd_reset()
@@ -103,7 +105,7 @@ class CLIChannel:
         self._output(f"\n{text}\n")
 
     async def _on_outbound(self, msg: OutboundMessage) -> None:
-        """获得回复结果"""
+        """收到消息时调用的回调函数"""
         agent_name = await self._resolve_agent_name()
         self._output(f"\n🤖({agent_name}): {msg.content}\n")
         self._prompt()
@@ -122,6 +124,7 @@ class CLIChannel:
         self._output(f"🧑({self._username}): ")
 
     def _output(self, text: str) -> None:
+        """终端打印"""
         self._output_func(text)
 
     async def _resolve_agent_name(self) -> str:
@@ -147,6 +150,7 @@ def _default_username() -> str:
 
 
 def _default_output(text: str) -> None:
+    """将内容 utf8 编码后输出到终端"""
     try:
         sys.stdout.reconfigure(encoding="utf-8", errors="replace")
     except Exception:

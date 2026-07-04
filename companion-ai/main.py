@@ -33,6 +33,14 @@ logger = logging.getLogger(__name__)
 
 
 class Runtime:
+    """
+    应用程序运行时容器，管理核心组件的生命周期。
+
+    包含三个核心组件：
+    - bus: 消息总线，负责渠道与智能体之间的消息传递
+    - session: 会话管理器，管理用户会话和历史记录
+    - agent: 智能体服务，协调 LLM、工具和对话流程
+    """
     def __init__(self) -> None:
         self.bus = MessageBus()
         self.session = SessionManager()
@@ -63,6 +71,10 @@ async def _scan_rag_index() -> None:
 
 
 async def _start_runtime(runtime: Runtime) -> list[asyncio.Task]:
+    """初始化
+    启动后台任务：
+       - _agent_worker: 消费入站消息，调用智能体处理
+       - dispatch_outbound: 分发出站消息到各频道"""
     await init_db()
     await _scan_rag_index()
     return [

@@ -194,6 +194,7 @@ class PlanningFlow(BaseFlow):
             initial_emotion_tag=emotion_tag,
         )
 
+        # 该轮对话不需要 pla 功能 直接转chat输出
         if not decision.needs_plan:
             task.mode = "chat"
             await save_task(session_key, task)
