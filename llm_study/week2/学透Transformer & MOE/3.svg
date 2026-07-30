@@ -1,0 +1,154 @@
+<svg viewBox="0 0 1200 700" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <!-- Gradient for the main circle -->
+    <linearGradient id="mainGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#00ff88;stop-opacity:1" />
+      <stop offset="50%" style="stop-color:#00ccff;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#ffaa00;stop-opacity:1" />
+    </linearGradient>
+    
+    <!-- Gradient for neurons -->
+    <radialGradient id="neuronGradient">
+      <stop offset="0%" style="stop-color:#00ccff;stop-opacity:0.8" />
+      <stop offset="100%" style="stop-color:#00ccff;stop-opacity:0.3" />
+    </radialGradient>
+    
+    <!-- Glow effect -->
+    <filter id="glow">
+      <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+      <feMerge> 
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    
+    <!-- Connection line animation -->
+    <filter id="lineGlow">
+      <feGaussianBlur stdDeviation="2" result="coloredBlur"/>
+      <feMerge> 
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+  
+  <!-- Background -->
+  <rect width="1200" height="700" fill="#0a1628"/>
+  
+  <!-- Question text -->
+  <text x="600" y="80" text-anchor="middle" fill="#ffffff" font-family="Arial, sans-serif" font-size="40" font-weight="300">
+    什么是神经网络？
+  </text>
+  
+  <!-- Central concept circle -->
+  <circle cx="600" cy="200" r="70" fill="none" stroke="url(#mainGradient)" stroke-width="3" filter="url(#glow)"/>
+  <text x="600" y="190" text-anchor="middle" fill="#ffffff" font-family="Arial, sans-serif" font-size="24" font-weight="500">
+    神经网络
+  </text>
+  <text x="600" y="215" text-anchor="middle" fill="#00ff88" font-family="Arial, sans-serif" font-size="16">
+    Neural Network
+  </text>
+  
+  <!-- Input Layer -->
+  <text x="150" y="320" text-anchor="middle" fill="#00ff88" font-family="Arial, sans-serif" font-size="18" font-weight="400">
+    输入层
+  </text>
+  <circle cx="150" cy="350" r="15" fill="url(#neuronGradient)" stroke="#00ccff" stroke-width="2"/>
+  <circle cx="150" cy="390" r="15" fill="url(#neuronGradient)" stroke="#00ccff" stroke-width="2"/>
+  <circle cx="150" cy="430" r="15" fill="url(#neuronGradient)" stroke="#00ccff" stroke-width="2"/>
+  
+  <!-- Hidden Layer 1 -->
+  <text x="350" y="320" text-anchor="middle" fill="#00ccff" font-family="Arial, sans-serif" font-size="18" font-weight="400">
+    隐藏层
+  </text>
+  <circle cx="350" cy="350" r="15" fill="url(#neuronGradient)" stroke="#00ccff" stroke-width="2"/>
+  <circle cx="350" cy="380" r="15" fill="url(#neuronGradient)" stroke="#00ccff" stroke-width="2"/>
+  <circle cx="350" cy="410" r="15" fill="url(#neuronGradient)" stroke="#00ccff" stroke-width="2"/>
+  <circle cx="350" cy="440" r="15" fill="url(#neuronGradient)" stroke="#00ccff" stroke-width="2"/>
+  
+  <!-- Hidden Layer 2 -->
+  <circle cx="500" cy="350" r="15" fill="url(#neuronGradient)" stroke="#00ccff" stroke-width="2"/>
+  <circle cx="500" cy="380" r="15" fill="url(#neuronGradient)" stroke="#00ccff" stroke-width="2"/>
+  <circle cx="500" cy="410" r="15" fill="url(#neuronGradient)" stroke="#00ccff" stroke-width="2"/>
+  <circle cx="500" cy="440" r="15" fill="url(#neuronGradient)" stroke="#00ccff" stroke-width="2"/>
+  
+  <!-- Output Layer -->
+  <text x="650" y="320" text-anchor="middle" fill="#ffaa00" font-family="Arial, sans-serif" font-size="18" font-weight="400">
+    输出层
+  </text>
+  <circle cx="650" cy="360" r="15" fill="url(#neuronGradient)" stroke="#ffaa00" stroke-width="2"/>
+  <circle cx="650" cy="400" r="15" fill="url(#neuronGradient)" stroke="#ffaa00" stroke-width="2"/>
+  
+  <!-- Connections between all neurons -->
+  <!-- Input to Hidden Layer 1 -->
+  <line x1="165" y1="350" x2="335" y2="350" stroke="#00ff88" stroke-width="1" opacity="0.6" filter="url(#lineGlow)"/>
+  <line x1="165" y1="350" x2="335" y2="380" stroke="#00ff88" stroke-width="1" opacity="0.4"/>
+  <line x1="165" y1="350" x2="335" y2="410" stroke="#00ff88" stroke-width="1" opacity="0.3"/>
+  <line x1="165" y1="350" x2="335" y2="440" stroke="#00ff88" stroke-width="1" opacity="0.3"/>
+  
+  <line x1="165" y1="390" x2="335" y2="350" stroke="#00ff88" stroke-width="1" opacity="0.4"/>
+  <line x1="165" y1="390" x2="335" y2="380" stroke="#00ff88" stroke-width="1" opacity="0.5"/>
+  <line x1="165" y1="390" x2="335" y2="410" stroke="#00ff88" stroke-width="1" opacity="0.4"/>
+  <line x1="165" y1="390" x2="335" y2="440" stroke="#00ff88" stroke-width="1" opacity="0.3"/>
+  
+  <line x1="165" y1="430" x2="335" y2="350" stroke="#00ff88" stroke-width="1" opacity="0.3"/>
+  <line x1="165" y1="430" x2="335" y2="380" stroke="#00ff88" stroke-width="1" opacity="0.4"/>
+  <line x1="165" y1="430" x2="335" y2="410" stroke="#00ff88" stroke-width="1" opacity="0.5"/>
+  <line x1="165" y1="430" x2="335" y2="440" stroke="#00ff88" stroke-width="1" opacity="0.4"/>
+  
+  <!-- Hidden Layer 1 to Hidden Layer 2 -->
+  <line x1="365" y1="350" x2="485" y2="350" stroke="#00ccff" stroke-width="1" opacity="0.6"/>
+  <line x1="365" y1="350" x2="485" y2="380" stroke="#00ccff" stroke-width="1" opacity="0.4"/>
+  <line x1="365" y1="350" x2="485" y2="410" stroke="#00ccff" stroke-width="1" opacity="0.3"/>
+  <line x1="365" y1="350" x2="485" y2="440" stroke="#00ccff" stroke-width="1" opacity="0.3"/>
+  
+  <line x1="365" y1="380" x2="485" y2="350" stroke="#00ccff" stroke-width="1" opacity="0.4"/>
+  <line x1="365" y1="380" x2="485" y2="380" stroke="#00ccff" stroke-width="1" opacity="0.5"/>
+  <line x1="365" y1="380" x2="485" y2="410" stroke="#00ccff" stroke-width="1" opacity="0.4"/>
+  <line x1="365" y1="380" x2="485" y2="440" stroke="#00ccff" stroke-width="1" opacity="0.3"/>
+  
+  <line x1="365" y1="410" x2="485" y2="350" stroke="#00ccff" stroke-width="1" opacity="0.3"/>
+  <line x1="365" y1="410" x2="485" y2="380" stroke="#00ccff" stroke-width="1" opacity="0.4"/>
+  <line x1="365" y1="410" x2="485" y2="410" stroke="#00ccff" stroke-width="1" opacity="0.5"/>
+  <line x1="365" y1="410" x2="485" y2="440" stroke="#00ccff" stroke-width="1" opacity="0.4"/>
+  
+  <line x1="365" y1="440" x2="485" y2="350" stroke="#00ccff" stroke-width="1" opacity="0.3"/>
+  <line x1="365" y1="440" x2="485" y2="380" stroke="#00ccff" stroke-width="1" opacity="0.3"/>
+  <line x1="365" y1="440" x2="485" y2="410" stroke="#00ccff" stroke-width="1" opacity="0.4"/>
+  <line x1="365" y1="440" x2="485" y2="440" stroke="#00ccff" stroke-width="1" opacity="0.5"/>
+  
+  <!-- Hidden Layer 2 to Output -->
+  <line x1="515" y1="350" x2="635" y2="360" stroke="#ffaa00" stroke-width="1" opacity="0.6"/>
+  <line x1="515" y1="350" x2="635" y2="400" stroke="#ffaa00" stroke-width="1" opacity="0.4"/>
+  
+  <line x1="515" y1="380" x2="635" y2="360" stroke="#ffaa00" stroke-width="1" opacity="0.5"/>
+  <line x1="515" y1="380" x2="635" y2="400" stroke="#ffaa00" stroke-width="1" opacity="0.5"/>
+  
+  <line x1="515" y1="410" x2="635" y2="360" stroke="#ffaa00" stroke-width="1" opacity="0.4"/>
+  <line x1="515" y1="410" x2="635" y2="400" stroke="#ffaa00" stroke-width="1" opacity="0.6"/>
+  
+  <line x1="515" y1="440" x2="635" y2="360" stroke="#ffaa00" stroke-width="1" opacity="0.3"/>
+  <line x1="515" y1="440" x2="635" y2="400" stroke="#ffaa00" stroke-width="1" opacity="0.5"/>
+  
+  <!-- Explanation text -->
+  <text x="600" y="530" text-anchor="middle" fill="#ffffff" font-family="Arial, sans-serif" font-size="28" font-weight="300">
+    模仿人脑神经元连接的计算模型
+  </text>
+  
+  <text x="600" y="570" text-anchor="middle" fill="#00ff88" font-family="Arial, sans-serif" font-size="22" font-weight="300">
+    通过层层连接处理和学习数据模式
+  </text>
+  
+  <!-- Brain-like decorative elements -->
+  <circle cx="900" cy="350" r="3" fill="#00ff88" opacity="0.8"/>
+  <circle cx="920" cy="370" r="2" fill="#00ccff" opacity="0.6"/>
+  <circle cx="940" cy="340" r="2" fill="#ffaa00" opacity="0.6"/>
+  <line x1="900" y1="350" x2="920" y2="370" stroke="#00ff88" stroke-width="1" opacity="0.4"/>
+  <line x1="920" y1="370" x2="940" y2="340" stroke="#00ccff" stroke-width="1" opacity="0.4"/>
+  
+  <!-- Additional decorative neurons -->
+  <circle cx="100" cy="200" r="2" fill="#00ff88" opacity="0.6"/>
+  <circle cx="1050" cy="180" r="2" fill="#00ccff" opacity="0.6"/>
+  <circle cx="150" cy="550" r="2" fill="#ffaa00" opacity="0.6"/>
+  <circle cx="1000" cy="520" r="2" fill="#00ff88" opacity="0.6"/>
+</svg>
