@@ -3,7 +3,7 @@
 <html lang="en">
 <head><meta charset="utf-8"/>
 <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
-<title>Transformer笔记</title><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.1.10/require.min.js"></script>
+<title>Transformer&amp;MoE笔记</title><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.1.10/require.min.js"></script>
 <style type="text/css">
     pre { line-height: 125%; }
 td.linenos .normal { color: inherit; background-color: transparent; padding-left: 5px; padding-right: 5px; }
@@ -7898,6 +7898,7 @@ encoder部分将中文进行嵌入、编码，再经过不同的映射后作为d
 </div>
 <div class="jp-InputArea jp-Cell-inputArea"><div class="jp-InputPrompt jp-InputArea-prompt">
 </div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput" data-mime-type="text/markdown">
+<div style="page-break-after: always;"></div>
 <h1 id="2026/7/31">2026/7/31<a class="anchor-link" href="#2026/7/31">¶</a></h1>
 </div>
 </div>
@@ -7990,7 +7991,7 @@ $$\frac{1}{1-p}$$
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
 <div class="jp-InputArea jp-Cell-inputArea">
-<div class="jp-InputPrompt jp-InputArea-prompt">In [ ]:</div>
+<div class="jp-InputPrompt jp-InputArea-prompt">In [5]:</div>
 <div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
 <div class="cm-editor cm-s-jupyter">
 <div class="highlight hl-ipython3"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">torch</span>
@@ -8126,7 +8127,7 @@ $$\frac{1}{1-p}$$
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
 <div class="jp-InputArea jp-Cell-inputArea">
-<div class="jp-InputPrompt jp-InputArea-prompt">In [ ]:</div>
+<div class="jp-InputPrompt jp-InputArea-prompt">In [12]:</div>
 <div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
 <div class="cm-editor cm-s-jupyter">
 <div class="highlight hl-ipython3"><pre><span></span><span class="k">class</span><span class="w"> </span><span class="nc">EncoderLayer</span><span class="p">(</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">):</span>
@@ -8188,6 +8189,7 @@ $$\frac{1}{1-p}$$
 </div>
 <div class="jp-InputArea jp-Cell-inputArea"><div class="jp-InputPrompt jp-InputArea-prompt">
 </div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput" data-mime-type="text/markdown">
+<div style="page-break-after: always;"></div>
 <h1 id="2026/8/1">2026/8/1<a class="anchor-link" href="#2026/8/1">¶</a></h1><ul>
 <li>绝对位置编码(Absolute Position Encoding, APE):<ul>
 <li>注意力机制只负责考虑token之间的相关性，没有考虑到token出现顺序的问题，会产生“你爱我”和“我爱你”在<br/>
@@ -8209,7 +8211,7 @@ $$PE(pos,2i+1)=\cos\left(\frac{pos}{10000^{2i/d}}\right)$$
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
 <div class="jp-InputArea jp-Cell-inputArea">
-<div class="jp-InputPrompt jp-InputArea-prompt">In [ ]:</div>
+<div class="jp-InputPrompt jp-InputArea-prompt">In [15]:</div>
 <div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
 <div class="cm-editor cm-s-jupyter">
 <div class="highlight hl-ipython3"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">math</span>
@@ -8351,20 +8353,6 @@ $$PE(pos,2i+1)=\cos\left(\frac{pos}{10000^{2i/d}}\right)$$
 </div>
 </div>
 </div>
-<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=140baac9">
-<div class="jp-Cell-inputWrapper" tabindex="0">
-<div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
-</div>
-<div class="jp-InputArea jp-Cell-inputArea"><div class="jp-InputPrompt jp-InputArea-prompt">
-</div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput" data-mime-type="text/markdown">
-<div align="center">
-<img alt="No description has been provided for this image" src="decoder-only.jpg" style="width:60%"/>
-<p>Decoder-Only架构</p>
-</div>
-</div>
-</div>
-</div>
-</div>
 <div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=40a5c10f">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
@@ -8372,7 +8360,7 @@ $$PE(pos,2i+1)=\cos\left(\frac{pos}{10000^{2i/d}}\right)$$
 <div class="jp-InputArea jp-Cell-inputArea"><div class="jp-InputPrompt jp-InputArea-prompt">
 </div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput" data-mime-type="text/markdown">
 <div style="page-break-after: always;"></div>
-<h1 id="2026/8/3">2026/8/3<a class="anchor-link" href="#2026/8/3">¶</a></h1><ul>
+<h1 id="2026/8/3">2026/8/3<a class="anchor-link" href="#2026/8/3">¶</a></h1><h3 id="%E6%97%8B%E8%BD%AC%E4%BD%8D%E7%BD%AE%E7%BC%96%E7%A0%81">旋转位置编码<a class="anchor-link" href="#%E6%97%8B%E8%BD%AC%E4%BD%8D%E7%BD%AE%E7%BC%96%E7%A0%81">¶</a></h3><ul>
 <li><p>旋转位置编码(RoPE, Rotary Position Embedding)</p>
 <ul>
 <li>绝对位置编码将位置信息加到 token 的 embedding 向量上；RoPE 则对注意力中的 $Q$ 和 $K$ 进行旋转，使它们的内积包含相对位置信息。</li>
@@ -8493,7 +8481,7 @@ $$</p>
 </ul>
 </li>
 </ul>
-<p>下面是手撕</p>
+<p>代码实现：</p>
 </div>
 </div>
 </div>
@@ -8502,7 +8490,7 @@ $$</p>
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
 <div class="jp-InputArea jp-Cell-inputArea">
-<div class="jp-InputPrompt jp-InputArea-prompt">In [ ]:</div>
+<div class="jp-InputPrompt jp-InputArea-prompt">In [19]:</div>
 <div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
 <div class="cm-editor cm-s-jupyter">
 <div class="highlight hl-ipython3"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">torch</span>
@@ -8700,18 +8688,566 @@ output[0, 0, 0]:
 tensor([ 1.9269,  1.4873,  0.9007, -2.1055,  0.6784, -1.2345, -0.0431, -1.6047])
 
 All tests passed!
-tensor([ 1.9269,  1.4873,  0.9007, -2.1055,  0.6784, -1.2345, -0.0431, -1.6047])
-
-output[0, 0, 0]:
-tensor([ 1.9269,  1.4873,  0.9007, -2.1055,  0.6784, -1.2345, -0.0431, -1.6047])
-
-All tests passed!
 </pre>
 </div>
 </div>
 </div>
 </div>
 </div>
-</main>
+<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=3d4d32ab">
+<div class="jp-Cell-inputWrapper" tabindex="0">
+<div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
+</div>
+<div class="jp-InputArea jp-Cell-inputArea"><div class="jp-InputPrompt jp-InputArea-prompt">
+</div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput" data-mime-type="text/markdown">
+<div style="page-break-after: always;"></div>
+<h1 id="2026/8/4">2026/8/4<a class="anchor-link" href="#2026/8/4">¶</a></h1><h3 id="MoE(Mixture-of-Experts)%E6%9E%B6%E6%9E%84%E8%A7%A3%E6%9E%90">MoE(Mixture of Experts)架构解析<a class="anchor-link" href="#MoE(Mixture-of-Experts)%E6%9E%B6%E6%9E%84%E8%A7%A3%E6%9E%90">¶</a></h3> <div align="center">
+<img alt="No description has been provided for this image" src="decoder-only.jpg" style="width:40%"/>
+<br/>
+    Decoder-Only架构
+    <br/>
+<br/>
+<img alt="No description has been provided for this image" src="MoE.jpg" width="60%"/>
+<br/>
+    Switch Transformers论文的 MoE layer
+  </div>
+<ul>
+<li><p>相比于稠密模型(Dense Model)的优势：</p>
+<p>数学角度考虑：</p>
+<ul>
+<li>稠密模型矩阵乘法中，权重矩阵满秩，没有任何部分被跳过；</li>
+<li>稀疏模型通过门控机制，将输入向量只与特定的权重子集相乘</li>
+</ul>
+<p><strong>思考</strong>：相当于在MoEt架构中我通过叠加FFN层，虽然每个token处理的时候并没有动用全部参数（计算成本几乎相同），但是<strong>由于模型实打实的比稠密模型参数更多</strong>。所以训练数据量可以更大从而模型拟合效果更好，更能发挥Scaling-Law的特点。</p>
+<p><em>稀疏模型能够在远少于稠密模型所需的计算资源下进行有效的预训练，与稠密模型相比，混合专家模型通常能够更快地达到相同的质量水平。</em></p>
+<p>注意：训练和推理的时候，MoE模型并没有与同等的Dense模型占用相同的显存。相反，所有的FFN都需要放到GPU中（无论是否选到那个专家），因此显存占用是实打实的和MoE全部参数一样。</p>
+<p>厂家在宣传时候说的（如DeepSeek V3）：总参数671B，激活参数37B。是指一次token生成<strong>计算量接近37B的稠密模型</strong>，实际部署的时候仍然需要<strong>能够承载671B参数的显卡</strong>。
+我想这里厂家的意思其实是：我的671B的模型推理的时候只需要37B模型的<strong>计算成本</strong>，同时我的模型能力也不会打折扣。</p>
+</li>
+<li><p>结构变化：</p>
+<ul>
+<li><p>将Decoder部分原有的单个FFN替换为多个FFN，看作多个专家</p>
+</li>
+<li><p>对于<strong>每个输入的token</strong>所要经过的专家由Router决策。例如，在图中，“More”这个Token可能被发送到第二个专家，而“Parameters”这个Token被发送到第一个专家。</p>
+<p>有时，一个Token甚至可以被发送到<strong>多个专家</strong></p>
+</li>
+</ul>
+</li>
+<li><p>Top-k门控：假设有8个专家，路由器计算输入token与这8个专家的匹配分数，只保留分数最高的两个专家，将其余6个专家的权重强制置为0</p>
+</li>
+<li><p>优化方向：</p>
+<ul>
+<li><p>负载均衡(Load Balancing)</p>
+<ul>
+<li><p>起因：专家/路由坍缩(Expert/Routing Collapse)现象</p>
+<p>在训练初期由于参数随机初始化，<strong>某一个专家</strong>的参数恰好比其余专家更好，路由器发现给这个专家处理的token<strong>损失下降的较快</strong>，所以路由器开始倾向于给这个专家更多的token。数据量多了，这个专家的参数也得到了很多优化（对于语言模式的拟合效果变得更强），这个专家就会又被分配更多的数据。最终产生”滚雪球”的效果，其余专家的参数都废弃了，<strong>稀疏模型退化成了一个小的稠密模型</strong></p>
+</li>
+<li><p>解决方案：引入辅助损失函数(Auxiliary Loss / Load Balancing Loss)。强制要求路由器给每个专家分配大致相同数量的任务。</p>
+<p>$$
+Loss_{Total}=Loss_{Task}+ \alpha Loss_{Balance}
+$$</p>
+</li>
+</ul>
+</li>
+<li><p>通信开销(Communication Overhead)</p>
+<ul>
+<li>在多GPU训练或推理时，专家通常分布在不同显卡上。跨卡传输数据会带来额外延迟（All-to-All通信）</li>
+</ul>
+</li>
+<li><p>细粒度专家(Fine-grained Experts)</p>
+<ul>
+<li><p>传统MoE：如 Mixtral 8x7B，每个专家都很大，功能比较杂</p>
+</li>
+<li><p>DeepSeek-V3：增加专家数量，同时减少单个专家的规模，使专家粒度变细。如64甚至128个小专家。使专家的专业度更高，知识切分更细腻。</p>
+</li>
+</ul>
+</li>
+<li><p>共享专家(Shared Experts)</p>
+<ul>
+<li><p>问题：有些通用知识（比如基本语法逻辑）是每个专家都应该掌握的，如果每个专家都自己学一次浪费参数</p>
+</li>
+<li><p>解决：设置一个“共享专家”，它总是被激活处理通用知识，其他路由专家负责特定领域知识。</p>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</div>
+</div>
+</div>
+</div>
+<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=6e2e3064">
+<div class="jp-Cell-inputWrapper" tabindex="0">
+<div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
+</div>
+<div class="jp-InputArea jp-Cell-inputArea"><div class="jp-InputPrompt jp-InputArea-prompt">
+</div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput" data-mime-type="text/markdown">
+<h3 id="%E6%89%8B%E6%92%95">手撕<a class="anchor-link" href="#%E6%89%8B%E6%92%95">¶</a></h3><h3 id="1.-%E5%9F%BA%E7%A1%80%E7%89%88MoE">1. 基础版MoE<a class="anchor-link" href="#1.-%E5%9F%BA%E7%A1%80%E7%89%88MoE">¶</a></h3><div align="">
+<div align="center">
+<img alt="No description has been provided for this image" src="basic_moe.png" style="width:80%"/>
+</div>
+</div>
+</div>
+</div>
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=b657ba39">
+<div class="jp-Cell-inputWrapper" tabindex="0">
+<div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
+</div>
+<div class="jp-InputArea jp-Cell-inputArea">
+<div class="jp-InputPrompt jp-InputArea-prompt">In [24]:</div>
+<div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
+<div class="cm-editor cm-s-jupyter">
+<div class="highlight hl-ipython3"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">torch</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">torch.nn</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">nn</span>
+
+<span class="k">class</span><span class="w"> </span><span class="nc">BasicExpert</span><span class="p">(</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">):</span>
+    <span class="c1"># 一个 Expert 可以是一个最简单的， linear 层即可</span>
+    <span class="c1"># 也可以是 MLP 层</span>
+    <span class="c1"># 也可以是 更复杂的 MLP 层（active function 设置为 swiglu）</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">feature_in</span><span class="p">,</span> <span class="n">feature_out</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">linear</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">Linear</span><span class="p">(</span><span class="n">feature_in</span><span class="p">,</span> <span class="n">feature_out</span><span class="p">)</span>
+    
+    <span class="k">def</span><span class="w"> </span><span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">linear</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+
+<span class="k">class</span><span class="w"> </span><span class="nc">BasicMOE</span><span class="p">(</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">):</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">feature_in</span><span class="p">,</span> <span class="n">feature_out</span><span class="p">,</span> <span class="n">expert_number</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">experts</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">ModuleList</span><span class="p">(</span>
+            <span class="p">[</span>
+                <span class="n">BasicExpert</span><span class="p">(</span><span class="n">feature_in</span><span class="p">,</span> <span class="n">feature_out</span><span class="p">)</span> <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">expert_number</span><span class="p">)</span>
+            <span class="p">]</span>
+        <span class="p">)</span>
+        <span class="c1"># gate 就是选一个 expert </span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">gate</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">Linear</span><span class="p">(</span><span class="n">feature_in</span><span class="p">,</span> <span class="n">expert_number</span><span class="p">)</span>
+    
+    <span class="k">def</span><span class="w"> </span><span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">):</span>
+        <span class="c1"># x 的 shape 是 （batch, feature_in) 每个token都有一个对应的所有专家的权重</span>
+        <span class="n">expert_weight</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">gate</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>  <span class="c1"># shape 是 (batch, expert_number) </span>
+        <span class="nb">print</span><span class="p">(</span><span class="n">expert_weight</span><span class="p">)</span>
+
+        <span class="n">expert_out_list</span> <span class="o">=</span> <span class="p">[</span>
+            <span class="n">expert</span><span class="p">(</span><span class="n">x</span><span class="p">)</span><span class="o">.</span><span class="n">unsqueeze</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span> <span class="k">for</span> <span class="n">expert</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">experts</span>
+        <span class="p">]</span>  <span class="c1"># 里面每一个元素的 shape 是： (batch, 1, feature_out)</span>
+
+        <span class="c1"># concat 起来 (batch, expert_number, feature_out)</span>
+        <span class="n">expert_output</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">cat</span><span class="p">(</span><span class="n">expert_out_list</span><span class="p">,</span> <span class="n">dim</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+
+        <span class="c1"># print(expert_output.size())</span>
+
+        <span class="n">expert_weight</span> <span class="o">=</span> <span class="n">expert_weight</span><span class="o">.</span><span class="n">unsqueeze</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span> <span class="c1"># (batch, 1, expert_nuber)</span>
+
+        <span class="c1"># expert_weight * expert_out_list 张量广播</span>
+        <span class="n">output</span> <span class="o">=</span> <span class="n">expert_weight</span> <span class="o">@</span> <span class="n">expert_output</span>  <span class="c1"># (batch, 1, feature_out)</span>
+        
+        <span class="k">return</span> <span class="n">output</span><span class="o">.</span><span class="n">squeeze</span><span class="p">()</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">test_basic_moe</span><span class="p">():</span>
+    <span class="n">x</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">rand</span><span class="p">(</span><span class="mi">3</span><span class="p">,</span> <span class="mi">8</span><span class="p">)</span>
+
+    <span class="n">basic_moe</span> <span class="o">=</span> <span class="n">BasicMOE</span><span class="p">(</span><span class="n">feature_in</span><span class="o">=</span><span class="mi">8</span><span class="p">,</span> <span class="n">feature_out</span><span class="o">=</span><span class="mi">8</span><span class="p">,</span> <span class="n">expert_number</span><span class="o">=</span><span class="mi">4</span><span class="p">)</span>
+
+    <span class="n">out</span> <span class="o">=</span> <span class="n">basic_moe</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="n">out</span><span class="p">)</span>
+
+
+<span class="n">test_basic_moe</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+</div>
+</div>
+<div class="jp-Cell-outputWrapper">
+<div class="jp-Collapser jp-OutputCollapser jp-Cell-outputCollapser">
+</div>
+<div class="jp-OutputArea jp-Cell-outputArea">
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="text/plain" tabindex="0">
+<pre>tensor([[0.4714, 0.0906, 0.8025, 0.7108, 0.5651, 0.1862, 0.1635, 0.1133],
+        [0.3121, 0.5549, 0.9438, 0.1161, 0.8182, 0.6905, 0.7348, 0.0894],
+        [0.0583, 0.5808, 0.0096, 0.0761, 0.7333, 0.4169, 0.1895, 0.6070]])
+tensor([[-0.2326,  0.0416,  0.1068,  0.1211],
+        [-0.6029, -0.0189, -0.0311,  0.2898],
+        [-0.3096,  0.1672, -0.1977,  0.2512]], grad_fn=&lt;AddmmBackward0&gt;)
+tensor([[-0.0427, -0.1057,  0.1943, -0.0723,  0.0436,  0.1858, -0.1089,  0.0929],
+        [ 0.0708,  0.0123,  0.1536, -0.3015,  0.0044,  0.3179, -0.3580,  0.4358],
+        [ 0.0610,  0.0943,  0.0081, -0.2488, -0.0768,  0.1851, -0.1119,  0.1687]],
+       grad_fn=&lt;SqueezeBackward0&gt;)
+</pre>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=466eb7ac">
+<div class="jp-Cell-inputWrapper" tabindex="0">
+<div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
+</div>
+<div class="jp-InputArea jp-Cell-inputArea"><div class="jp-InputPrompt jp-InputArea-prompt">
+</div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput" data-mime-type="text/markdown">
+<h3 id="2.-SparseMoE">2. SparseMoE<a class="anchor-link" href="#2.-SparseMoE">¶</a></h3>
+</div>
+</div>
+</div>
+</div>
+<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=fc9de0a3">
+<div class="jp-Cell-inputWrapper" tabindex="0">
+<div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
+</div>
+<div class="jp-InputArea jp-Cell-inputArea"><div class="jp-InputPrompt jp-InputArea-prompt">
+</div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput" data-mime-type="text/markdown">
+<p>torch.top_k的用法</p>
+</div>
+</div>
+</div>
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=52dc72d6">
+<div class="jp-Cell-inputWrapper" tabindex="0">
+<div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
+</div>
+<div class="jp-InputArea jp-Cell-inputArea">
+<div class="jp-InputPrompt jp-InputArea-prompt">In [26]:</div>
+<div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
+<div class="cm-editor cm-s-jupyter">
+<div class="highlight hl-ipython3"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">torch</span>
+
+<span class="c1"># 输入张量</span>
+<span class="n">x</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">([</span><span class="mi">10</span><span class="p">,</span> <span class="mi">20</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">40</span><span class="p">,</span> <span class="mi">30</span><span class="p">])</span>
+
+<span class="c1"># 找到前 3 个最大值及其索引</span>
+<span class="n">values</span><span class="p">,</span> <span class="n">indices</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">topk</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="mi">3</span><span class="p">)</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="s2">"Top 3 values:"</span><span class="p">,</span> <span class="n">values</span><span class="p">)</span>  <span class="c1"># 输出: tensor([40, 30, 20])</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">"Indices:"</span><span class="p">,</span> <span class="n">indices</span><span class="p">)</span>      <span class="c1"># 输出: tensor([3, 4, 1])</span>
+</pre></div>
+</div>
+</div>
+</div>
+</div>
+<div class="jp-Cell-outputWrapper">
+<div class="jp-Collapser jp-OutputCollapser jp-Cell-outputCollapser">
+</div>
+<div class="jp-OutputArea jp-Cell-outputArea">
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="text/plain" tabindex="0">
+<pre>Top 3 values: tensor([40, 30, 20])
+Indices: tensor([3, 4, 1])
+</pre>
+</div>
+</div>
+</div>
+</div>
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell jp-mod-noOutputs" id="cell-id=2cf12628">
+<div class="jp-Cell-inputWrapper" tabindex="0">
+<div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
+</div>
+<div class="jp-InputArea jp-Cell-inputArea">
+<div class="jp-InputPrompt jp-InputArea-prompt">In [ ]:</div>
+<div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
+<div class="cm-editor cm-s-jupyter">
+<div class="highlight hl-ipython3"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">torch</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">torch.nn</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">nn</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">torch.nn.functional</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">F</span>
+
+
+<span class="sd">"""</span>
+<span class="sd">Sparse MoE 练习骨架</span>
+
+<span class="sd">你可以按这个顺序自己写：</span>
+<span class="sd">1. Router 先把 token 映射到 expert logits</span>
+<span class="sd">2. 对 logits 做 softmax 得到 routing 概率</span>
+<span class="sd">3. 选 top-k experts，并把权重重新归一化</span>
+<span class="sd">4. 根据 expert 分发 token</span>
+<span class="sd">5. 每个 expert 单独处理 token</span>
+<span class="sd">6. 把结果按权重加回去</span>
+
+<span class="sd">建议你一边写一边回答这些问题：</span>
+<span class="sd">- 这里的输入 shape 是什么？</span>
+<span class="sd">- token 级别路由和 batch 级别路由有什么区别？</span>
+<span class="sd">- top-k 之后，为什么还要重新归一化？</span>
+<span class="sd">- expert mask 的维度为什么要这样设计？</span>
+<span class="sd">- 为什么最终要用 index_add_ 或类似方式汇总？</span>
+<span class="sd">"""</span>
+
+
+<span class="k">class</span><span class="w"> </span><span class="nc">BasicExpert</span><span class="p">(</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""</span>
+<span class="sd">    先自己实现一个最简单的 expert。</span>
+
+<span class="sd">    思考方向：</span>
+<span class="sd">    - 只做一层线性变换够不够？</span>
+<span class="sd">    - 需不需要激活函数？</span>
+<span class="sd">    - hidden_dim -&gt; intermediate_dim -&gt; hidden_dim 是否更像常见 FFN？</span>
+<span class="sd">    """</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">input_dim</span><span class="p">,</span> <span class="n">output_dim</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">ffn</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">Sequential</span><span class="p">(</span>
+            <span class="n">nn</span><span class="o">.</span><span class="n">Linear</span><span class="p">(</span><span class="n">input_dim</span><span class="p">,</span> <span class="n">input_dim</span> <span class="o">*</span> <span class="mi">4</span><span class="p">),</span>
+            <span class="n">nn</span><span class="o">.</span><span class="n">GELU</span><span class="p">(),</span>
+            <span class="n">nn</span><span class="o">.</span><span class="n">Linear</span><span class="p">(</span><span class="n">input_dim</span> <span class="o">*</span> <span class="mi">4</span><span class="p">,</span> <span class="n">output_dim</span><span class="p">)</span>
+        <span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">):</span>
+        <span class="c1"># x.shape: (batch_size * seq_len, hidden_dim)</span>
+        <span class="n">x</span> <span class="o">=</span> <span class="n">x</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">ffn</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">x</span>
+
+<span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s2">"__main__"</span><span class="p">:</span>
+    <span class="n">base_exp</span> <span class="o">=</span> <span class="n">BasicExpert</span><span class="p">(</span><span class="mi">16</span><span class="p">,</span> <span class="mi">16</span><span class="p">)</span>
+    <span class="n">x</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">rand</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="mi">16</span><span class="p">)</span>
+    <span class="n">out</span> <span class="o">=</span> <span class="n">base_exp</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="n">out</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="n">out</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=cf45172f">
+<div class="jp-Cell-inputWrapper" tabindex="0">
+<div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
+</div>
+<div class="jp-InputArea jp-Cell-inputArea"><div class="jp-InputPrompt jp-InputArea-prompt">
+</div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput" data-mime-type="text/markdown">
+<p>举例说明 expert mask 的作用：</p>
+<p>假设某个专家的 mask 是：</p>
+<div class="highlight"><pre><span></span><span class="n">expert_mask</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">tensor</span><span class="p">([</span>
+    <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">],</span>
+    <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span>
+<span class="p">])</span>
+</pre></div>
+<p>它的 shape 是 <code>(2, 4)</code>，表示：</p>
+<ul>
+<li>第 0 行：top1 命中的 token 位置</li>
+<li>第 1 行：top2 命中的 token 位置</li>
+</ul>
+<p>那么执行：</p>
+<div class="highlight"><pre><span></span><span class="n">idx</span><span class="p">,</span> <span class="n">top_x</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">expert_mask</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+</pre></div>
+<p>结果会是：</p>
+<div class="highlight"><pre><span></span><span class="n">idx</span>    <span class="o">=</span> <span class="n">tensor</span><span class="p">([</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">])</span>
+<span class="n">top_x</span>  <span class="o">=</span> <span class="n">tensor</span><span class="p">([</span><span class="mi">0</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">1</span><span class="p">])</span>
+</pre></div>
+<p>意思是：</p>
+<ul>
+<li>token 0 是通过 top1 分到这个 expert 的</li>
+<li>token 3 是通过 top1 分到这个 expert 的</li>
+<li>token 1 是通过 top2 分到这个 expert 的</li>
+</ul>
+<p>从而得到指定 expert 将要处理的所有token索引</p>
+</div>
+</div>
+</div>
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=072753b4">
+<div class="jp-Cell-inputWrapper" tabindex="0">
+<div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
+</div>
+<div class="jp-InputArea jp-Cell-inputArea">
+<div class="jp-InputPrompt jp-InputArea-prompt">In [45]:</div>
+<div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
+<div class="cm-editor cm-s-jupyter">
+<div class="highlight hl-ipython3"><pre><span></span><span class="k">class</span><span class="w"> </span><span class="nc">MOERouter</span><span class="p">(</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""</span>
+<span class="sd">    Router 负责决定每个 token 该去哪些 experts。</span>
+
+<span class="sd">    你可以先自己想清楚这三个张量：</span>
+<span class="sd">    - router_logits</span>
+<span class="sd">    - router_weights</span>
+<span class="sd">    - selected_experts</span>
+<span class="sd">    """</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">hidden_dim</span><span class="p">,</span> <span class="n">expert_number</span><span class="p">,</span> <span class="n">top_k</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">gate</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">Linear</span><span class="p">(</span><span class="n">hidden_dim</span><span class="p">,</span> <span class="n">expert_number</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">expert_number</span> <span class="o">=</span> <span class="n">expert_number</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">top_k</span> <span class="o">=</span> <span class="n">top_k</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">hidden_states</span><span class="p">):</span>
+
+        <span class="n">logits</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">gate</span><span class="p">(</span><span class="n">hidden_states</span><span class="p">)</span>    <span class="c1"># (batch * seq_len, expert_number)</span>
+        <span class="n">routing_probs</span> <span class="o">=</span> <span class="n">F</span><span class="o">.</span><span class="n">softmax</span><span class="p">(</span><span class="n">logits</span><span class="p">,</span> <span class="n">dim</span><span class="o">=-</span><span class="mi">1</span><span class="p">)</span>    <span class="c1"># (batch * seq_len, expert_number)</span>
+
+        <span class="c1"># 返回每个token选取专家权重最高的前k个 权重值 和 专家索引</span>
+        <span class="c1"># router_weights &amp; selected_experts shape:(batch * seq_len, top_k) </span>
+        <span class="n">router_weights</span><span class="p">,</span> <span class="n">selected_experts</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">topk</span><span class="p">(</span><span class="n">routing_probs</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">top_k</span><span class="p">,</span> <span class="n">dim</span><span class="o">=-</span><span class="mi">1</span><span class="p">)</span>
+
+        <span class="c1"># top_k 权重归一化</span>
+        <span class="n">router_weights</span> <span class="o">=</span> <span class="n">router_weights</span> <span class="o">/</span> <span class="n">router_weights</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">dim</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">keepdim</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+        <span class="c1"># 构造专家掩码 (b_s * seq_len, top_k, num_exp) --permute-&gt; (num_exp, top_k, b_s * seq_len) </span>
+        <span class="n">expert_mask</span> <span class="o">=</span> <span class="n">F</span><span class="o">.</span><span class="n">one_hot</span><span class="p">(</span><span class="n">selected_experts</span><span class="p">,</span> <span class="n">num_classes</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">expert_number</span><span class="p">)</span>
+        <span class="n">expert_mask</span> <span class="o">=</span> <span class="n">expert_mask</span><span class="o">.</span><span class="n">permute</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">routing_probs</span><span class="p">,</span> <span class="n">router_weights</span><span class="p">,</span> <span class="n">selected_experts</span><span class="p">,</span> <span class="n">expert_mask</span>
+
+
+<span class="k">class</span><span class="w"> </span><span class="nc">MOEConfig</span><span class="p">:</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">hidden_dim</span><span class="p">,</span>
+        <span class="n">expert_number</span><span class="p">,</span>
+        <span class="n">top_k</span><span class="p">,</span>
+        <span class="n">shared_experts_number</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span>
+    <span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">hidden_dim</span> <span class="o">=</span> <span class="n">hidden_dim</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">expert_number</span> <span class="o">=</span> <span class="n">expert_number</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">top_k</span> <span class="o">=</span> <span class="n">top_k</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">shared_experts_number</span> <span class="o">=</span> <span class="n">shared_experts_number</span>
+
+
+<span class="k">class</span><span class="w"> </span><span class="nc">SparseMOE</span><span class="p">(</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""</span>
+<span class="sd">    Sparse MoE 主体。</span>
+
+<span class="sd">    你可以把它拆成三个阶段来写：</span>
+<span class="sd">    1. flatten token</span>
+<span class="sd">    2. router 分配 expert</span>
+<span class="sd">    3. expert 计算 + 聚合输出</span>
+<span class="sd">    """</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">config</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">hidden_dim</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">hidden_dim</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">expert_number</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">expert_number</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">top_k</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">top_k</span>
+
+        <span class="c1"># TODO: 先决定 BasicExpert 的结构，再在这里实例化</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">experts</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">ModuleList</span><span class="p">(</span>
+            <span class="p">[</span>
+                <span class="n">BasicExpert</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">hidden_dim</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">hidden_dim</span><span class="p">)</span>
+                <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">expert_number</span><span class="p">)</span>
+            <span class="p">]</span>
+        <span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">router</span> <span class="o">=</span> <span class="n">MOERouter</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">hidden_dim</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">expert_number</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">top_k</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">):</span>
+
+        <span class="c1"># x: (batch, seq_len, hidden_dim)</span>
+        <span class="n">batch_size</span><span class="p">,</span> <span class="n">seq_len</span><span class="p">,</span> <span class="n">hidden_dim</span> <span class="o">=</span> <span class="n">x</span><span class="o">.</span><span class="n">size</span><span class="p">()</span>
+
+        <span class="c1"># 合并前两个维度</span>
+        <span class="n">hidden_state</span> <span class="o">=</span> <span class="n">x</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">hidden_dim</span><span class="p">)</span> <span class="c1"># (batch * seq_len, hidden_dim)</span>
+
+        <span class="n">routing_probs</span><span class="p">,</span> <span class="n">router_weights</span><span class="p">,</span> <span class="n">selected_experts</span><span class="p">,</span> <span class="n">expert_mask</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">router</span><span class="p">(</span><span class="n">hidden_state</span><span class="p">)</span>
+
+        <span class="n">final_hidden_states</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="n">hidden_state</span><span class="p">)</span>
+
+        <span class="c1"># 这里是站在所有专家角度，从头开始遍历所有专家索引 </span>
+        <span class="c1"># 找到所有用到第 i 个专家的token进行计算</span>
+        <span class="k">for</span> <span class="n">expert_idx</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">expert_number</span><span class="p">):</span>
+            <span class="n">expert_layer</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">experts</span><span class="p">[</span><span class="n">expert_idx</span><span class="p">]</span>
+            
+            <span class="c1"># 找到这个专家用到的所有 token 位置索引以及它们的 top_k 编号</span>
+            <span class="n">expert_rank_idx</span><span class="p">,</span> <span class="n">token_idx</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">expert_mask</span><span class="p">[</span><span class="n">expert_idx</span><span class="p">])</span>
+
+            <span class="c1"># 按照用到的 token 索引从输入中拿到对应的 token 向量</span>
+            <span class="n">current_hidden_state</span> <span class="o">=</span> <span class="n">hidden_state</span><span class="p">[</span><span class="n">token_idx</span><span class="p">]</span>
+
+            <span class="c1"># 根据token索引以及topk索引拿到属于该专家的所有要处理的token权重</span>
+            <span class="c1"># expert_weights shape: (len(token_idx),)</span>
+            <span class="n">expert_weights</span> <span class="o">=</span> <span class="n">router_weights</span><span class="p">[</span><span class="n">token_idx</span><span class="p">,</span> <span class="n">expert_rank_idx</span><span class="p">]</span><span class="o">.</span><span class="n">unsqueeze</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+            <span class="n">current_hidden_state</span> <span class="o">=</span> <span class="n">expert_layer</span><span class="p">(</span><span class="n">current_hidden_state</span><span class="p">)</span> <span class="o">*</span> <span class="n">expert_weights</span>
+
+            <span class="c1"># 根据token索引顺序拼接所有经过专家的向量</span>
+            <span class="c1"># 沿着第 0 维，根据 token_idx 指定的位置，把 current_hidden_states 逐行加到 final_hidden_states 里面。</span>
+            <span class="n">final_hidden_states</span><span class="o">.</span><span class="n">index_add_</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">token_idx</span><span class="p">,</span> <span class="n">current_hidden_state</span><span class="p">)</span>
+
+            <span class="c1"># 也可以写成下面这样，这样很直观，对于同一个token，根据top加权求和 </span>
+            <span class="c1"># 不过容易出现错误，+= 操作在处理重复索引时需要多次读写内存，可能会导致竞争条件</span>
+            <span class="c1"># final_hidden_states[token_idx] += current_hidden_state</span>
+        
+        <span class="n">final_hidden_states</span> <span class="o">=</span> <span class="n">final_hidden_states</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="n">batch_size</span><span class="p">,</span> <span class="n">seq_len</span><span class="p">,</span> <span class="n">hidden_dim</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">final_hidden_states</span><span class="p">,</span> <span class="n">routing_probs</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">test_token_level_moe</span><span class="p">():</span>
+    <span class="n">x</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">rand</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">16</span><span class="p">)</span>
+    <span class="n">config</span> <span class="o">=</span> <span class="n">MOEConfig</span><span class="p">(</span><span class="mi">16</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>
+    <span class="n">token_level_moe</span> <span class="o">=</span> <span class="n">SparseMOE</span><span class="p">(</span><span class="n">config</span><span class="p">)</span>
+    <span class="n">out</span><span class="p">,</span> <span class="n">router_prob</span> <span class="o">=</span> <span class="n">token_level_moe</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="n">out</span><span class="o">.</span><span class="n">shape</span><span class="p">,</span> <span class="n">router_prob</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="n">out</span><span class="p">,</span> <span class="n">router_prob</span><span class="p">)</span>
+
+
+<span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s2">"__main__"</span><span class="p">:</span>
+
+    <span class="n">test_token_level_moe</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+</div>
+</div>
+<div class="jp-Cell-outputWrapper">
+<div class="jp-Collapser jp-OutputCollapser jp-Cell-outputCollapser">
+</div>
+<div class="jp-OutputArea jp-Cell-outputArea">
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="text/plain" tabindex="0">
+<pre>torch.Size([2, 4, 16]) torch.Size([8, 2])
+tensor([[[ 0.4229,  0.9097,  0.2960,  0.5178,  0.1654,  0.8748,  0.9941,
+           0.0273,  0.0437,  0.8180,  0.5934,  0.8261,  0.9890, -0.0743,
+           0.9666,  0.7870],
+         [ 0.6149,  0.1561,  0.2713,  0.8616,  0.8769,  0.3547,  0.2241,
+           0.3560,  0.3431,  0.5408,  0.7584,  0.7201,  0.1599,  0.5783,
+           0.6611,  0.2530],
+         [ 0.3029,  0.5901,  0.8197,  0.4669,  0.7724,  0.8412,  0.3872,
+           0.3938,  0.3541,  0.3501,  0.3818,  0.6611,  0.5832,  0.7541,
+           0.2296,  0.8574],
+         [ 0.7643,  0.2215,  0.8052,  0.4293,  0.3257,  0.6674,  0.0834,
+           0.5188, -0.0509,  0.5463,  0.0117,  0.7523,  0.3761,  0.2235,
+           0.6485,  0.2869]],
+
+        [[ 0.2970,  0.9608,  0.5590,  0.6210,  0.4255,  0.5219,  0.4252,
+           0.1238,  0.6470,  0.4091,  0.6767,  1.1296,  0.4122,  0.1537,
+           1.0424, -0.0084],
+         [ 0.2638,  0.9089,  1.1385,  0.2931,  0.6331,  0.6380,  1.0088,
+           0.0188,  0.7852,  0.5756,  0.7353,  1.1764,  0.6310,  0.0253,
+           0.7067,  0.2719],
+         [ 0.5591,  0.4071,  1.0905,  0.3931,  0.0259,  0.1633,  1.1652,
+           0.8050,  0.7752,  0.0150,  0.5317,  0.3085,  0.1994,  0.6959,
+           0.9228,  0.6218],
+         [ 0.0522,  0.5969,  0.4085,  0.7529,  0.1152,  1.0043,  0.8504,
+           0.1998,  0.1803,  0.4002,  0.7437,  0.9170,  0.6057, -0.1336,
+           0.5337,  0.0814]]], grad_fn=&lt;ViewBackward0&gt;) tensor([[0.3922, 0.6078],
+        [0.4969, 0.5031],
+        [0.5595, 0.4405],
+        [0.5192, 0.4808],
+        [0.4134, 0.5866],
+        [0.4423, 0.5577],
+        [0.4940, 0.5060],
+        [0.3598, 0.6402]], grad_fn=&lt;SoftmaxBackward0&gt;)
+</pre>
+</div>
+</div>
+</div>
+</div>
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell jp-mod-noOutputs" id="cell-id=3dff7ded">
+<div class="jp-Cell-inputWrapper" tabindex="0">
+<div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
+</div>
+<div class="jp-InputArea jp-Cell-inputArea">
+<div class="jp-InputPrompt jp-InputArea-prompt">In [ ]:</div>
+<div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
+<div class="cm-editor cm-s-jupyter">
+<div class="highlight hl-ipython3"><pre><span></span> 
+</pre></div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div></main>
 </body>
 </html>
