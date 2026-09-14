@@ -1,0 +1,4 @@
+interface:
+  display_name: "Study Note & Summary"
+  short_description: "Turn code practice into dated study notes"
+  default_prompt: "Use $study-note-summary to create a dated Markdown study note and a concise learning summary from these files."
