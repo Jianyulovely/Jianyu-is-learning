@@ -1,0 +1,144 @@
+\begin{thebibliography}{10}
+
+\bibitem{interleaving2025}
+{Anonymous}.
+\newblock Interleaving {SFT} and {RL} with buffer.
+\newblock {\em arXiv preprint arXiv:2510.04454}, 2025.
+
+\bibitem{posttraining2025survey}
+{Anonymous}.
+\newblock Large language models post-training: Surveying techniques from
+  alignment to reasoning.
+\newblock {\em arXiv preprint arXiv:2503.06072}, 2025.
+
+\bibitem{deepdive2025reasoning}
+{Anonymous}.
+\newblock {LLM} post-training: A deep dive into reasoning large language
+  models.
+\newblock {\em arXiv preprint arXiv:2502.21321}, 2025.
+
+\bibitem{quagmires2025}
+{Anonymous}.
+\newblock Quagmires in {SFT-RL} post-training: When high {SFT} scores mislead
+  and what to use instead.
+\newblock {\em arXiv preprint arXiv:2510.01624}, 2025.
+
+\bibitem{safetyrepro2026}
+{Anonymous}.
+\newblock {SafetyRepro}: Configuration-conditional rank instability on
+  alignment benchmarks.
+\newblock {\em arXiv preprint arXiv:2605.25492}, 2026.
+
+\bibitem{sftmemorizes2025}
+Tianzhe Chu, Yuexiang Zhai, Jihan Yang, Shengbang Tong, Saining Xie, Dale
+  Schuurmans, Quoc~V. Le, Sergey Levine, and Yi~Ma.
+\newblock {SFT} memorizes, {RL} generalizes: A comparative study of foundation
+  model post-training.
+\newblock {\em arXiv preprint arXiv:2501.17161}, 2025.
+
+\bibitem{cobbe2021gsm8k}
+Karl Cobbe, Vineet Kosaraju, Mohammad Bavarian, Mark Chen, Heewoo Jun, Lukasz
+  Kaiser, Matthias Plappert, Jerry Tworek, Jacob Hilton, Reiichiro Nakano,
+  Christopher Hesse, and John Schulman.
+\newblock Training verifiers to solve math word problems.
+\newblock {\em arXiv preprint arXiv:2110.14168}, 2021.
+
+\bibitem{deepseek2025r1}
+{DeepSeek-AI}.
+\newblock {DeepSeek-R1}: Incentivizing reasoning capability in {LLMs} via
+  reinforcement learning.
+\newblock {\em arXiv preprint arXiv:2501.12948}, 2025.
+
+\bibitem{dong2023raft}
+Hanze Dong, Wei Xiong, Deepanshu Goyal, Rui Pan, Shizhe Diao, Jipeng Zhang,
+  Kashun Shum, and Tong Zhang.
+\newblock {RAFT}: Reward ranked finetuning for generative foundation model
+  alignment.
+\newblock {\em Transactions on Machine Learning Research}, 2023.
+
+\bibitem{hendrycks2021math}
+Dan Hendrycks, Collin Burns, Saurav Kadavath, Akul Arora, Steven Basart, Eric
+  Tang, Dawn Song, and Jacob Steinhardt.
+\newblock Measuring mathematical problem solving with the {MATH} dataset.
+\newblock {\em arXiv preprint arXiv:2103.03874}, 2021.
+
+\bibitem{hu2021lora}
+Edward~J. Hu, Yelong Shen, Phillip Wallis, Zeyuan Allen-Zhu, Yuanzhi Li, Shean
+  Wang, Lu~Wang, and Weizhu Chen.
+\newblock {LoRA}: Low-rank adaptation of large language models.
+\newblock In {\em International Conference on Learning Representations (ICLR)},
+  2022.
+
+\bibitem{lambert2024tulu3}
+Nathan Lambert, Jacob Morrison, Valentina Pyatkin, et~al.
+\newblock Tulu 3: Pushing frontiers in open language model post-training.
+\newblock {\em arXiv preprint arXiv:2411.15124}, 2024.
+
+\bibitem{ouyang2022instructgpt}
+Long Ouyang, Jeffrey Wu, Xu~Jiang, Diogo Almeida, et~al.
+\newblock Training language models to follow instructions with human feedback.
+\newblock In {\em Advances in Neural Information Processing Systems (NeurIPS)},
+  2022.
+
+\bibitem{qwen2024qwen25}
+{Qwen Team}.
+\newblock Qwen2.5 technical report.
+\newblock {\em arXiv preprint arXiv:2412.15115}, 2024.
+
+\bibitem{rafailov2023dpo}
+Rafael Rafailov, Archit Sharma, Eric Mitchell, Stefano Ermon, Christopher~D.
+  Manning, and Chelsea Finn.
+\newblock Direct preference optimization: Your language model is secretly a
+  reward model.
+\newblock In {\em Advances in Neural Information Processing Systems (NeurIPS)},
+  2023.
+
+\bibitem{schulman2017ppo}
+John Schulman, Filip Wolski, Prafulla Dhariwal, Alec Radford, and Oleg Klimov.
+\newblock Proximal policy optimization algorithms.
+\newblock {\em arXiv preprint arXiv:1707.06347}, 2017.
+
+\bibitem{midtraining2026}
+Soumye Singhal, Joseph Jennings, Ka~Shun Shum, Alexander Bukharin, et~al.
+\newblock Priming base models for agentic post-training: An open midtraining
+  recipe.
+\newblock {\em arXiv preprint arXiv:2610.22019}, 2026.
+
+\bibitem{snell2024scaling}
+Charlie Snell, Jaehoon Lee, Kelvin Xu, and Aviral Kumar.
+\newblock Scaling {LLM} test-time compute optimally can be more effective than
+  scaling model parameters.
+\newblock In {\em International Conference on Learning Representations (ICLR)},
+  2025.
+
+\bibitem{tan2026scaling}
+Zelin Tan, Hejia Geng, Xiaohang Yu, Mulei Zhang, Guancheng Wan, Yifan Zhou,
+  Qiang He, Xiangyuan Xue, Heng Zhou, Yutao Fan, Zhong-Zhi Li, Zaibin Zhang,
+  Guibin Zhang, Chen Zhang, Zhenfei Yin, Philip Torr, and Lei Bai.
+\newblock Scaling behaviors of {LLM} reinforcement learning post-training: An
+  empirical study in mathematical reasoning.
+\newblock In {\em Proceedings of the 64th Annual Meeting of the Association for
+  Computational Linguistics (ACL)}, 2026.
+
+\bibitem{wang2022selfconsistency}
+Xuezhi Wang, Jason Wei, Dale Schuurmans, Quoc Le, Ed~Chi, Sharan Narang,
+  Aakanksha Chowdhery, and Denny Zhou.
+\newblock Self-consistency improves chain of thought reasoning in language
+  models.
+\newblock In {\em International Conference on Learning Representations (ICLR)},
+  2023.
+
+\bibitem{rlreasoning2025}
+Yang Yue, Zhiqi Chen, Rui Lu, Andrew Zhao, Zhaokai Wang, Shiji Song, and Gao
+  Huang.
+\newblock Does reinforcement learning really incentivize reasoning capacity in
+  {LLMs} beyond the base model?
+\newblock {\em arXiv preprint arXiv:2504.13837}, 2025.
+
+\bibitem{zelikman2022star}
+Eric Zelikman, Yuhuai Wu, Jesse Mu, and Noah~D. Goodman.
+\newblock {STaR}: Bootstrapping reasoning with reasoning.
+\newblock In {\em Advances in Neural Information Processing Systems (NeurIPS)},
+  2022.
+
+\end{thebibliography}

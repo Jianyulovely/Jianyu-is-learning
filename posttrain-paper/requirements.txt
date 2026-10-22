@@ -1,0 +1,13 @@
+# Core dependencies only. No TRL, no vLLM, no bitsandbytes:
+#   1.5B in bf16 fits in 16 GB, so 4-bit quantisation buys nothing but pain
+#   (bitsandbytes on Windows is the usual source of "it won't import").
+#
+# IMPORTANT: install torch FIRST, from the cu128 index, because the RTX 5060 Ti
+# is Blackwell (sm_120) and the default PyPI wheel may not carry the kernel.
+# See RUNBOOK.md section 1.
+
+torch>=2.7.0
+transformers>=4.51.0
+peft>=0.14.0
+datasets>=3.2.0
+numpy>=1.26

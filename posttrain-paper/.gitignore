@@ -1,0 +1,24 @@
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
+# 数据集：体积大、可重新生成，不要进仓库
+data/
+
+# 模型权重：几十 MB 到几 GB，不进仓库。
+# 我们公开的是「能复现的配方和日志」，不是训练好的 adapter。
+runs/**/*.safetensors
+runs/**/*.bin
+runs/**/*.pt
+runs/_smoke/
+
+# 采样池很大（K=8 × 3000 prompt），可重新生成
+runs/sample/samples.jsonl
+
+# 刻意保留的：
+#   runs/evals/*.json            ← 论文里每个数字的出处
+#   runs/evals/*.predictions.jsonl
+#   runs/*/meta.json             ← 每个 run 的完整配置
+#   runs/*/budget.json
+# 这几类必须提交，否则「结果可追溯」这句话就是假的。

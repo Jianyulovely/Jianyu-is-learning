@@ -1,0 +1,313 @@
+%% =====================================================================
+%%  Compute-Matched Post-Training Arena  --  paper skeleton
+%%
+%%  THIS FILE CONTAINS NO RESULTS. Every number is XX.X or \TODO{...}.
+%%  That is deliberate: the numbers must come out of src/ and runs/.
+%%
+%%  Compile:
+%%      pdflatex main && bibtex main && pdflatex main && pdflatex main
+%%
+%%  Template: ACL 2026 (needs acl.sty + acl_natbib.bst from the ACL
+%%  rolling-review template). If you target NeurIPS instead, swap in
+%%  neurips_2026.sty and drop the [review] option.
+%% =====================================================================
+\documentclass[11pt]{article}
+
+%% --- template + package detection ---------------------------------------
+%% Every package below is OPTIONAL and probed together with its own
+%% dependencies (e.g. graphicx needs grfext, which a minimal MiKTeX may lack).
+%% The skeleton therefore compiles on a bare TeX install so you can check the
+%% argument structure before the figure/bib pipeline exists.
+\newif\ifacltemplate
+\IfFileExists{acl.sty}{%
+  \acltemplatetrue
+  \usepackage[review]{acl}%
+}{%
+  \acltemplatefalse
+}
+
+\ifacltemplate\else
+  \IfFileExists{geometry.sty}{\usepackage[margin=1in]{geometry}}{}
+  % Deliberately NOT loading natbib on the fallback path. With the 'plain'
+  % bibliography style natbib cannot recover author names, so every \citet
+  % emits "Author undefined". The \citet/\citep shims further down are enough,
+  % and they cannot break on a bare TeX install.
+\fi
+
+\IfFileExists{microtype.sty}{\usepackage{microtype}}{}
+\IfFileExists{booktabs.sty}{\usepackage{booktabs}}{}
+\IfFileExists{color.sty}{%
+  \IfFileExists{xcolor.sty}{\usepackage{xcolor}}{}%
+}{}
+\IfFileExists{grfext.sty}{%
+  \IfFileExists{graphicx.sty}{\usepackage{graphicx}}{}%
+}{}
+\IfFileExists{amsmath.sty}{\usepackage{amsmath}}{}
+\IfFileExists{times.sty}{\usepackage{times}}{}
+\IfFileExists{T1enc.def}{\usepackage[T1]{fontenc}}{}
+
+%% --- fallbacks: \providecommand is a no-op when the package loaded -------
+\providecommand{\toprule}{\hline}
+\providecommand{\midrule}{\hline}
+\providecommand{\bottomrule}{\hline}
+\providecommand{\textcolor}[1]{}
+\providecommand{\includegraphics}[2][]{\fbox{PLACEHOLDER FIGURE}}
+\providecommand{\citet}[1]{\cite{#1}}
+\providecommand{\citep}[1]{\cite{#1}}
+\newcommand{\TODO}[1]{\textcolor{red}{[TODO: #1]}}
+\newcommand{\XX}{XX.X}
+
+\title{What Do You Buy with One GPU-Hour?\\
+       A Compute-Matched Study of Post-Training for Small Language Models}
+
+\author{Anonymous submission}
+\date{}
+
+\begin{document}
+\maketitle
+
+%% ---------------------------------------------------------------------
+\begin{abstract}
+Post-training methods for language models---supervised fine-tuning (SFT),
+rejection-sampling self-training, preference optimisation, and inference-time
+scaling---are usually compared under their own authors' compute budgets, which
+makes the reported gains hard to attribute. We instead fix the budget and ask
+a practitioner's question: \emph{at the scale of a single consumer GPU, which
+post-training investment returns the most accuracy per GPU-hour?} We build a
+controlled arena over two open model sizes (0.5B and 1.5B parameters), five
+methods, four budget points from 5 to 60 minutes, and two seeds, and we reuse
+a \emph{single} sampling pass across three of the methods so that the sampling
+cost is charged exactly once. \TODO{one-sentence headline finding, e.g.\
+``We find that self-consistency decoding dominates trained post-training on
+mathematical reasoning at every budget below \XX{} GPU-hours, while SFT remains
+the only method that reliably improves format compliance.''} We release the
+harness, all adapters, and the raw per-run logs.
+\end{abstract}
+
+%% ---------------------------------------------------------------------
+\section{Introduction}
+
+A practitioner with one consumer GPU and a week of wall-clock time faces a
+concrete allocation problem: spend the time training an adapter, generating and
+voting over samples at inference, or collecting better data? The post-training
+literature is rich in methods but almost always reports each method at the
+budget its authors chose, on models far larger than a single 16\,GB card can
+hold \cite{rafailov2023dpo,deepseek2025r1,lambert2024tulu3}. That literature
+therefore answers ``does method $M$ help?'' but not ``is $M$ the best use of my
+next ten hours?''
+
+This paper takes the second question seriously and makes three contributions.
+
+\begin{enumerate}
+  \item \textbf{A compute-matched arena.} We compare SFT on gold data,
+        rejection-sampling fine-tuning (RFT), DPO, self-consistency decoding,
+        and an untrained prompt-only baseline under a \emph{fixed GPU-hour
+        budget}, sweeping four budget points. Training stops when the budget is
+        exhausted, not when validation accuracy plateaus.
+  \item \textbf{A shared-sampling design.} RFT and DPO are both derived from a
+        single pool of $K$ samples per prompt, so the sampling cost is paid
+        once and charged once. Without this, the arena is three times more
+        expensive and stops being reproducible on one GPU.
+  \item \textbf{A format-dividend diagnostic.} We report accuracy under three
+        answer-extraction parsers of increasing strictness, and show how much
+        of each method's apparent gain survives the strictest one.
+        \TODO{state the measured dividend.}
+\end{enumerate}
+
+We are explicit about what this paper is not: it does not propose a new
+algorithm, it does not reach state of the art, and its scale is small. Its
+claim is scoped to the regime it measures---small open models, tens of
+GPU-hours---which is precisely the regime most practitioners actually occupy.
+
+%% ---------------------------------------------------------------------
+\section{Related Work}
+
+\paragraph{Post-training pipelines.}
+Instruction tuning and preference optimisation form the standard post-training
+stack \cite{ouyang2022instructgpt,rafailov2023dpo,lambert2024tulu3}, with
+reinforcement learning on verifiable rewards now central to reasoning models
+\cite{deepseek2025r1}; policy-gradient methods follow PPO
+\cite{schulman2017ppo}. Some pipelines now insert a \emph{midtraining} stage
+between pretraining and post-training \cite{midtraining2026}. Surveys of the
+area \cite{posttraining2025survey,deepdive2025reasoning} catalogue the design
+space but do not attempt cross-method budget normalisation.
+
+\paragraph{Does RL do more than SFT?}
+A contested line of work asks whether RL post-training teaches new capabilities
+or merely redistributes what the base model already has
+\cite{sftmemorizes2025,rlreasoning2025}. Our RFT and DPO arms are constructed
+from the \emph{same} sample pool, which lets the reader separate ``new data''
+from ``new objective'' effects that these studies must otherwise confound.
+
+\paragraph{Self-training and rejection sampling.}
+STaR \cite{zelikman2022star} and RAFT \cite{dong2023raft} fine-tune on
+self-generated correct trajectories; our RFT is the sampling-based variant of
+this family, and it shares its sample pool with DPO by construction.
+
+\paragraph{Inference-time scaling.}
+Self-consistency \cite{wang2022selfconsistency} and compute-optimal test-time
+scaling \cite{snell2024scaling} show that decoding-time compute can substitute
+for model scale. We ask the complementary question of whether it substitutes
+for \emph{post-training} compute, at matched cost.
+
+\paragraph{Scaling and empirical studies.}
+\citet{tan2026scaling} characterise RL post-training scaling on Qwen2.5 from
+0.5B to 72B and find a predictive power law plus saturation of RL efficiency
+with scale; our work is a budget-normalised complement at the small end.
+\citet{quagmires2025} warn that high SFT scores can mislead about downstream RL
+behaviour, and \citet{interleaving2025} study SFT/RL interleaving. Neither
+normalises by GPU-hours across inference-side alternatives.
+
+\paragraph{Evaluation fragility.}
+\citet{safetyrepro2026} show alignment leaderboard ranks are
+configuration-conditional. Our three-parser reporting is a small, deliberate
+concession to the same concern.
+
+%% ---------------------------------------------------------------------
+\section{Experimental Setup}
+
+\subsection{Models and data}
+We use Qwen2.5-Instruct at 0.5B and 1.5B \cite{qwen2024qwen25}, in bf16 with
+LoRA \cite{hu2021lora} ($r{=}16$, $\alpha{=}32$, all linear projections).
+Training prompts are drawn from GSM8K \cite{cobbe2021gsm8k} and the algebra
+split of MATH \cite{hendrycks2021math}; evaluation uses the GSM8K test set and
+MATH-500. We unify the target format to ``reasoning text, then
+\texttt{The answer is \textbackslash boxed\{X\}.}'' so that format compliance is
+measurable independently of correctness. We strip GSM8K's inline calculator
+annotations (\texttt{<{}<...>{}>}) from the reasoning text, because no tool
+evaluates them at inference time and MATH solutions contain none. A 5\% dev
+slice of the training pool is carved out before any tuning; the test sets are
+never used for any decision.
+
+\subsection{Methods}
+\paragraph{Prompt-only.} No training; the instruct model is queried directly.
+
+\paragraph{SFT.} LoRA fine-tuning on gold solutions.
+
+\paragraph{RFT.} We sample $K{=}8$ responses per prompt at
+$T{=}0.7$, keep the correct ones (verified against the gold answer), and run
+the same SFT recipe on them.
+
+\paragraph{DPO.} From the same pool we form (chosen, rejected) pairs wherever a
+prompt yielded both a correct and an incorrect response, and optimise the DPO
+objective \cite{rafailov2023dpo} with $\beta{=}0.1$. The reference policy is
+the base model with the adapter disabled, so no second weight copy is needed.
+
+\paragraph{Self-consistency (SC).} No training; at inference we sample $K$
+responses and take the majority answer \cite{wang2022selfconsistency}.
+
+\subsection{Budget accounting}
+\label{sec:budget}
+We define
+\begin{equation}
+  \text{GPU-hours} \;=\; \frac{t_{\text{wall}} \cdot n_{\text{GPU}}}{3600},
+\end{equation}
+measured around synchronised device work. Sampling and training are
+\emph{charged}; evaluation is not, because it is identical across methods and
+independent of the method's cost. Data preparation is not charged. This
+convention is what makes SC non-free: its entire cost is sampling, and charging
+it is the point of the comparison. For each budget point we calibrate
+throughput over a short warm-up and then convert the budget into a fixed number
+of optimiser steps, so every method at budget $b$ consumes the same $b$
+GPU-hours rather than converging independently.
+
+\subsection{Evaluation}
+We report accuracy under three parsers: \emph{lenient} (last number in the
+output), \emph{standard} (\texttt{\textbackslash boxed\{\}} if present, else
+the last number; our main metric), and \emph{strict}
+(\texttt{\textbackslash boxed\{\}} only, and only if a non-trivial reasoning
+trace precedes it). We additionally report format compliance (the fraction of
+outputs from which the parser could extract anything) and mean output length.
+Each configuration is run with two seeds; we report per-seed values alongside
+means.
+
+%% ---------------------------------------------------------------------
+\section{Results}
+
+\subsection{Accuracy as a function of budget}
+Table~\ref{tab:main} reports accuracy at each budget point, and
+Figure~\ref{fig:curve} plots accuracy against cumulative GPU-hours.
+\TODO{insert the number of the crossover point, if any.}
+
+\begin{table}[t]
+\centering
+\small
+\begin{tabular}{lcccc}
+\toprule
+Method & 5\,m & 15\,m & 30\,m & 60\,m \\
+\midrule
+Prompt-only & \XX & \XX & \XX & \XX \\
+Self-consistency & \XX & \XX & \XX & \XX \\
+SFT & \XX & \XX & \XX & \XX \\
+RFT & \XX & \XX & \XX & \XX \\
+DPO & \XX & \XX & \XX & \XX \\
+\bottomrule
+\end{tabular}
+\caption{GSM8K test accuracy (standard parser, mean of 2 seeds) at fixed
+GPU-minute budgets, 1.5B. Generated by \texttt{src/make\_tables.py}.}
+\label{tab:main}
+\end{table}
+
+\begin{figure}[t]
+\centering
+\IfFileExists{figs/curve_1p5b.pdf}{%
+  \includegraphics[width=\linewidth]{figs/curve_1p5b.pdf}%
+}{%
+  \fbox{\parbox[c][4cm][c]{0.85\linewidth}{\centering
+    \textbf{PLACEHOLDER}\\ Generate \texttt{figs/curve\_1p5b.pdf} from
+    \texttt{runs/evals/*.json}\\ (x: GPU-hours, y: accuracy, band: seed range)}}%
+}
+\caption{Accuracy vs.\ cumulative GPU-hours, 1.5B. Shaded band: range across
+seeds. \TODO{replace with the real figure; regenerate from
+\texttt{runs/evals/*.json}.}}
+\label{fig:curve}
+\end{figure}
+
+\subsection{The format dividend}
+\TODO{Table 3: lenient vs.\ standard vs.\ strict accuracy per method. State how
+much of each method's gain is extractable-answer rate rather than correctness.}
+
+\subsection{Where the budget is best spent}
+\TODO{Interpret the crossover. If SC dominates below some budget $b^*$ and
+training-side methods dominate above it, report $b^*$ with a confidence
+interval over seeds. If no crossover exists, say so plainly and report the
+constant gap.}
+
+%% ---------------------------------------------------------------------
+\section{Threats to Validity}
+\paragraph{Single scale above 0.5B.} Our two model sizes bracket a narrow range.
+We do not claim the ordering holds at 7B; \citet{tan2026scaling} find RL
+efficiency saturates with scale, which if anything favours the inference-side
+baselines at larger sizes, but we have not measured it.
+
+\paragraph{Two seeds.} Seed variance is comparable to some of the gaps we
+report. We therefore report per-seed numbers rather than only means, and we
+avoid significance claims that two seeds cannot support.
+
+\paragraph{One task family.} Mathematical reasoning has a verifiable reward,
+which favours SC and RFT and disadvantages DPO. We include GSM8K and MATH-500
+but not instruction-following, where we expect the ordering to reverse; that
+is a limitation, not a finding.
+
+\paragraph{Hyperparameters.} Matching compute does not match tuning effort. We
+give every method the same number of hyperparameter trials (reported in the
+appendix), but a method with a better default inherits an advantage we cannot
+remove.
+
+%% ---------------------------------------------------------------------
+\section{Conclusion}
+\TODO{two sentences: what a practitioner with one GPU should do, and what the
+result does \emph{not} license them to conclude.}
+
+%% ---------------------------------------------------------------------
+%% 'plain' ships with every TeX install; 'plainnat' often does not.
+\ifacltemplate\else\bibliographystyle{plain}\fi
+\bibliography{refs}
+
+\appendix
+\section{Hyperparameters and full run list}
+\TODO{auto-generate from \texttt{runs/*/meta.json}: every run, its seed,
+budget, step count, learning rate, wall-clock, and measured GPU-hours. Including
+the failed runs is what makes Section~\ref{sec:budget} credible.}
+
+\end{document}
