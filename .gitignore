@@ -31,3 +31,21 @@ llm_study/week5/minimind
 
 machine-learning/
 Reinforcement-Learning-Study-Note/
+
+ipheno-model/
+ipheno/
+
+MedicalGPT/
+
+my_resume/
+
+verl/
+shushu-internship-tool/
+
+agentic-rl-lab/
+# pandas ��ϰ������� notebook ���������ɣ�
+python/pandas/output/
+# Windows Ȩ���޸����ݣ�ȷ��������ɾ����
+.acl-backup/
+
+data/
